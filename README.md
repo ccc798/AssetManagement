@@ -1,18 +1,21 @@
 <<<<<<< HEAD
+
 # Asset Management
 
 声明：本项目使用reasonix+deepseek编写而成，项目图标使用豆包AI生产，如果有不符合代码规范或严重bug的地方，一定是本人对编码和reasonix使用不熟悉，并不代表reasonix和deepseek的真实水平。
 本项目的创立之初只是没有找到好用的类似的软件，或者软件没有找到我，制作这个项目也只是为了个人使用，分享出来也只是给大家提供多一个选择。有意见可以提但是水平有限。
 
+使用工具增加了trae，主要是reasonix不能很直观的看到代码本身，虽然也并不能看懂就是了。
+
 > 个人资产管理系统 — 记录、追踪、分析每一笔资产的价值与成本
 > Personal asset management system — track, analyze, and manage every item you own.
 
-![Flutter](https://img.shields.io/badge/Flutter-3.22+-blue)
-![Platform](https://img.shields.io/badge/Platform-Android%20|%20Windows%20|%20Linux%20|%20macOS%20|%20iOS-brightgreen)
-![License](https://img.shields.io/badge/License-GPLv3-blue)
-![i18n](https://img.shields.io/badge/i18n-zh%20|%20en-orange)
+!\[Flutter]\(https\://img.shields.io/badge/Flutter-3.22+-blue null)
+!\[Platform]\(https\://img.shields.io/badge/Platform-Android%20|%20Windows%20|%20Linux%20|%20macOS%20|%20iOS-brightgreen null)
+!\[License]\(https\://img.shields.io/badge/License-GPLv3-blue null)
+!\[i18n]\(https\://img.shields.io/badge/i18n-zh%20|%20en-orange null)
 
----
+***
 
 ## 目录 / Table of Contents
 
@@ -26,23 +29,23 @@
 - [技术栈 / Tech Stack](#技术栈--tech-stack)
 - [许可证 / License](#许可证--license)
 
----
+***
 
 ## 功能特性 / Features
 
 ### 核心功能
 
-| 功能 | 说明 |
-|------|------|
-| 🏷️ **物品管理** | 手动添加或 AI 截图识别，记录名称、品牌、价格、购买日期、分类 |
-| 💰 **日均成本** | 自动计算每件物品从购买日至今的日均消耗 |
-| 📅 **生命周期** | 设置计划使用期限，自动追踪剩余价值和淘汰日期 |
-| ⭐ **满意度评分** | 5 星评分系统 |
-| 🛡️ **保修与保险** | 可选的保修期限、到期日期、保险信息记录 |
-| 📦 **归档/删除分离** | 归档隐藏，误删可恢复，支持彻底删除 |
-| 📊 **统计分析** | 总览仪表盘、分类占比、月度趋势图，支持范围和时间过滤 |
-| 🔍 **全文搜索** | 按名称、品牌、分类、备注搜索 |
-| 🏷️ **分类过滤** | 12 个预设分类 + 自定义分类，按分类筛选物品列表 |
+| 功能             | 说明                               |
+| -------------- | -------------------------------- |
+| 🏷️ **物品管理**   | 手动添加或 AI 截图识别，记录名称、品牌、价格、购买日期、分类 |
+| 💰 **日均成本**    | 自动计算每件物品从购买日至今的日均消耗              |
+| 📅 **生命周期**    | 设置计划使用期限，自动追踪剩余价值和淘汰日期           |
+| ⭐ **满意度评分**    | 5 星评分系统                          |
+| 🛡️ **保修与保险**  | 可选的保修期限、到期日期、保险信息记录              |
+| 📦 **归档/删除分离** | 归档隐藏，误删可恢复，支持彻底删除                |
+| 📊 **统计分析**    | 总览仪表盘、分类占比、月度趋势图，支持范围和时间过滤       |
+| 🔍 **全文搜索**    | 按名称、品牌、分类、备注搜索                   |
+| 🏷️ **分类过滤**   | 12 个预设分类 + 自定义分类，按分类筛选物品列表       |
 
 ### AI 智能识别
 
@@ -80,13 +83,13 @@
 
 Android · Windows · Linux · macOS · iOS
 
----
+***
 
 ## 截图预览 / Screenshots
 
 <img width="702" height="1248" alt="image" src="https://github.com/user-attachments/assets/c9ccef1a-ca25-4714-a9f5-dbacc7054687" />
 
----
+***
 
 ## 项目结构 / Project Structure
 
@@ -176,7 +179,7 @@ asset_management/
 └── README.md
 ```
 
----
+***
 
 ## 快速开始 / Quick Start
 
@@ -201,11 +204,13 @@ flutter run --debug
 ### 构建 / Build
 
 交互式菜单：
+
 ```powershell
 .\build_all.ps1
 ```
 
 命令行模式：
+
 ```powershell
 .\build_all.ps1 -Target android      # 仅 Android APK
 .\build_all.ps1 -Target desktop      # 当前桌面平台
@@ -213,6 +218,7 @@ flutter run --debug
 ```
 
 构建产物：
+
 ```
 AssetManagement_vX.X.X.apk               # Android 安装包
 AssetManagement_vX.X.X_win64.zip         # Windows 便携版
@@ -220,7 +226,7 @@ AssetManagement_vX.X.X_linux64.tar.gz    # Linux 包
 AssetManagement_vX.X.X_macos.zip         # macOS 包
 ```
 
----
+***
 
 ## 多语言 / i18n
 
@@ -230,7 +236,8 @@ AssetManagement_vX.X.X_macos.zip         # macOS 包
 
 只需 3 步：
 
-1. **创建 `lib/core/i18n/locales/ja.dart`：**
+1. **创建** **`lib/core/i18n/locales/ja.dart`：**
+
 ```dart
 const Map<String, String> ja = <String, String>{
   'app.name': '資産管理',
@@ -239,7 +246,8 @@ const Map<String, String> ja = <String, String>{
 };
 ```
 
-2. **在 `translations.dart` 注册：**
+1. **在** **`translations.dart`** **注册：**
+
 ```dart
 import 'locales/ja.dart';
 
@@ -250,44 +258,44 @@ final Map<String, Map<String, String>> _allLocales = {
 };
 ```
 
-3. **完成。** 语言设置页会自动列出新语言选项。
+1. **完成。** 语言设置页会自动列出新语言选项。
 
----
+***
 
 ## 数据模型 / Data Model
 
 ### AssetItem
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `id` | `int` | 自增 ID |
-| `uuid` | `String` | 全局唯一 ID（用于合并去重） |
-| `name` | `String` | 物品名称 |
-| `category` | `String` | 分类（预设或自定义） |
-| `brand` | `String` | 品牌 |
-| `price` | `double` | 价格 |
-| `purchaseDate` | `DateTime?` | 购买日期 |
-| `plannedLifetimeDays` | `int` | 计划使用天数（默认 365） |
-| `rating` | `int` | 满意度评分 1-5 |
-| `notes` | `String` | 备注 |
-| `tags` | `List<String>` | 标签 |
-| `warrantyPeriod` | `String?` | 保修期限 |
-| `warrantyExpiry` | `DateTime?` | 保修到期 |
-| `insuranceInfo` | `String?` | 保险信息 |
-| `screenshotPath` | `String` | 截图文件路径 |
-| `isArchived` | `bool` | 归档标记 |
-| `isDeleted` | `bool` | 删除标记 |
+| 字段                    | 类型             | 说明              |
+| --------------------- | -------------- | --------------- |
+| `id`                  | `int`          | 自增 ID           |
+| `uuid`                | `String`       | 全局唯一 ID（用于合并去重） |
+| `name`                | `String`       | 物品名称            |
+| `category`            | `String`       | 分类（预设或自定义）      |
+| `brand`               | `String`       | 品牌              |
+| `price`               | `double`       | 价格              |
+| `purchaseDate`        | `DateTime?`    | 购买日期            |
+| `plannedLifetimeDays` | `int`          | 计划使用天数（默认 365）  |
+| `rating`              | `int`          | 满意度评分 1-5       |
+| `notes`               | `String`       | 备注              |
+| `tags`                | `List<String>` | 标签              |
+| `warrantyPeriod`      | `String?`      | 保修期限            |
+| `warrantyExpiry`      | `DateTime?`    | 保修到期            |
+| `insuranceInfo`       | `String?`      | 保险信息            |
+| `screenshotPath`      | `String`       | 截图文件路径          |
+| `isArchived`          | `bool`         | 归档标记            |
+| `isDeleted`           | `bool`         | 删除标记            |
 
 **计算属性：**
 
-| 属性 | 类型 | 公式 |
-|------|------|------|
-| `daysUsed` | `int` | `DateTime.now() - purchaseDate` |
-| `dailyCost` | `double` | `price / daysUsed` |
-| `remainingValueRatio` | `double` | `(plannedLifetimeDays - daysUsed) / plannedLifetimeDays` |
-| `estimatedEndDate` | `DateTime?` | `purchaseDate + plannedLifetimeDays` |
+| 属性                    | 类型          | 公式                                                       |
+| --------------------- | ----------- | -------------------------------------------------------- |
+| `daysUsed`            | `int`       | `DateTime.now() - purchaseDate`                          |
+| `dailyCost`           | `double`    | `price / daysUsed`                                       |
+| `remainingValueRatio` | `double`    | `(plannedLifetimeDays - daysUsed) / plannedLifetimeDays` |
+| `estimatedEndDate`    | `DateTime?` | `purchaseDate + plannedLifetimeDays`                     |
 
----
+***
 
 ## 使用指南 / Usage Guide
 
@@ -295,12 +303,12 @@ final Map<String, Map<String, String>> _allLocales = {
 
 打开 **设置 → AI 智能识别**：
 
-| 字段 | 推荐值 |
-|------|--------|
-| API 地址 | `https://api.openai.com/v1` 或其他兼容地址 |
-| API Key | 你的 API 密钥 |
-| 模型 | `gpt-4o-mini`（推荐，支持多模态） |
-| 最大 Token | 4096 |
+| 字段       | 推荐值                                 |
+| -------- | ----------------------------------- |
+| API 地址   | `https://api.openai.com/v1` 或其他兼容地址 |
+| API Key  | 你的 API 密钥                           |
+| 模型       | `gpt-4o-mini`（推荐，支持多模态）             |
+| 最大 Token | 4096                                |
 
 点击 **测试连接** 验证。截图识别在添加物品页使用。
 
@@ -325,37 +333,39 @@ final Map<String, Map<String, String>> _allLocales = {
 
 打开 **设置 → 主题设置**：明暗模式 + 8 组配色方案，点击即时预览。
 
----
+***
 
 ## 技术栈 / Tech Stack
 
-| 技术 | 用途 |
-|------|------|
-| Flutter 3.22+ | 跨平台框架 |
-| Riverpod 2.6 | 状态管理 |
-| Dio 5.4 | HTTP 客户端 |
-| fl_chart | 统计图表 |
-| file_picker | 文件选择器 |
-| path_provider | 文件路径管理 |
-| CustomPainter | 自定义矢量图形 |
-| xml | WebDAV PROPFIND 响应解析 |
+| 技术             | 用途                   |
+| -------------- | -------------------- |
+| Flutter 3.22+  | 跨平台框架                |
+| Riverpod 2.6   | 状态管理                 |
+| Dio 5.4        | HTTP 客户端             |
+| fl\_chart      | 统计图表                 |
+| file\_picker   | 文件选择器                |
+| path\_provider | 文件路径管理               |
+| CustomPainter  | 自定义矢量图形              |
+| xml            | WebDAV PROPFIND 响应解析 |
 
 ### 数据存储
 
-| 数据 | 路径 | 说明 |
-|------|------|------|
-| 物品数据 | `appDocDir/asset_management_data.json` | 所有资产数据 |
-| 配置数据 | `appDocDir/asset_management_config.json` | AI/WebDAV/主题配置 |
-| 本地备份 | 公开 Downloads 目录 | JSON 格式完整备份 |
-| CSV 导出 | 公开 Downloads 目录 | UTF-8 BOM CSV |
+| 数据     | 路径                                       | 说明             |
+| ------ | ---------------------------------------- | -------------- |
+| 物品数据   | `appDocDir/asset_management_data.json`   | 所有资产数据         |
+| 配置数据   | `appDocDir/asset_management_config.json` | AI/WebDAV/主题配置 |
+| 本地备份   | 公开 Downloads 目录                          | JSON 格式完整备份    |
+| CSV 导出 | 公开 Downloads 目录                          | UTF-8 BOM CSV  |
 
----
+***
 
 ## 许可证 / License
 
 GNU General Public License v3.0
 
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-=======
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
 # AssetManagement
->>>>>>> f5ef88f9cb9c068b6e446d784f4fd5945df8460b
+
+> > > > > > > f5ef88f9cb9c068b6e446d784f4fd5945df8460b
+
