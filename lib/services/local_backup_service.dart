@@ -77,6 +77,7 @@ class LocalBackupService {
       throw Exception('backup.errEmptyContent');
     }
 
+    // 4. 解析 JSON
     List<dynamic> jsonList;
     try {
       final parsed = jsonDecode(content);

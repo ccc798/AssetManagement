@@ -162,7 +162,7 @@ const Map<String, String> zh = <String, String>{
   'settings.version': '版本 {ver}',
   'settings.techStack': '技术栈',
   'settings.license': '开源许可',
-  'settings.licenseName': 'MIT License',
+  'settings.licenseName': 'GPLv3',
   'settings.techStackValue': 'Flutter · Dio · Riverpod · CustomPainter',
   'theme.title': '主题设置',
   'theme.mode': '明暗模式',

@@ -162,7 +162,7 @@ const Map<String, String> en = <String, String>{
   'settings.version': 'Version {ver}',
   'settings.techStack': 'Tech Stack',
   'settings.license': 'License',
-  'settings.licenseName': 'MIT License',
+  'settings.licenseName': 'GPLv3',
   'settings.techStackValue': 'Flutter · Dio · Riverpod · CustomPainter',
   'theme.title': 'Theme Settings',
   'theme.mode': 'Theme Mode',
