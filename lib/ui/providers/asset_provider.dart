@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database/asset_dao.dart';
 import '../../data/models/asset_item.dart';
 
@@ -91,6 +91,26 @@ final assetDetailProvider =
   ref.watch(assetVersionProvider);
   final dao = ref.read(assetDaoProvider);
   return dao.getById(id);
+});
+
+/// 分页配置
+final pageSizeProvider = StateProvider<int>((ref) => 20);
+final currentPageProvider = StateProvider<int>((ref) => 0);
+
+/// 分页物品列表
+final pagedAssetListProvider = FutureProvider<List<AssetItem>>((ref) async {
+  ref.watch(assetVersionProvider);
+  final dao = ref.read(assetDaoProvider);
+  final page = ref.watch(currentPageProvider);
+  final pageSize = ref.watch(pageSizeProvider);
+  return dao.getPaged(page, pageSize);
+});
+
+/// 物品总数
+final assetCountProvider = FutureProvider<int>((ref) async {
+  ref.watch(assetVersionProvider);
+  final dao = ref.read(assetDaoProvider);
+  return dao.getCount();
 });
 
 /// 工具 extension — 数据变更后调用 bumpVersion() 自动刷新所有列表/统计

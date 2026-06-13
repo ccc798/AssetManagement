@@ -18,14 +18,17 @@ class ItemOp {
     final dao = ref.read(assetDaoProvider);
     await dao.update(item.copyWith(isArchived: true));
     ref.bumpVersion();
-    AppToast.capsule(context, t('toast.archived', ref.read(localeCodeProvider)), Colors.blue);
+    if (context.mounted) {
+      AppToast.capsule(context, t('toast.archived', ref.read(localeCodeProvider)), Colors.blue);
+    }
   }
 
-  /// 删除物品（设置 isDeleted = true）
   static Future<void> delete(WidgetRef ref, BuildContext context, AssetItem item) async {
     final dao = ref.read(assetDaoProvider);
     await dao.softDelete(item.id);
     ref.bumpVersion();
-    AppToast.capsule(context, t('toast.deleted', ref.read(localeCodeProvider)), Colors.red);
+    if (context.mounted) {
+      AppToast.capsule(context, t('toast.deleted', ref.read(localeCodeProvider)), Colors.red);
+    }
   }
 }

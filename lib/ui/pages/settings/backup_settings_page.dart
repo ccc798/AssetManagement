@@ -1,13 +1,12 @@
-﻿import 'dart:convert';
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/i18n/translations.dart';
 import 'package:file_picker/file_picker.dart';
+
+import '../../../core/i18n/translations.dart';
 import '../../../data/database/database_manager.dart';
 import '../../../data/models/asset_item.dart';
 import '../../../services/local_backup_service.dart';
-import '../../../services/webdav_service.dart';
 import '../../providers/asset_provider.dart';
 import '../../widgets/app_toast.dart';
 import 'webdav_settings_page.dart';
@@ -26,223 +25,281 @@ class BackupSettingsPage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ─── 本地备份与恢复 ───
-          Text(t('backup.local', loc2), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+          _buildSectionTitle(t('backup.local', loc2), theme),
           const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 40, height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.teal.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.computer, color: Colors.teal),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          t('backup.localDesc', loc2),
-                          style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _localBackup(context, ref),
-                          icon: const Icon(Icons.download),
-                          label: Text(t('backup.localBackup', loc2)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _localRestore(context, ref, loc2),
-                          icon: const Icon(Icons.upload),
-                          label: Text(t('backup.localRestore', loc2)),
-                          style: OutlinedButton.styleFrom(foregroundColor: Colors.teal),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildLocalBackupCard(context, ref, loc2),
           const SizedBox(height: 24),
-
-          // ─── WebDAV 远程备份 ───
-          Text(t('backup.remote', loc2), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+          _buildSectionTitle(t('backup.remote', loc2), theme),
           const SizedBox(height: 8),
-          Card(
-            child: ListTile(
-              leading: Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.cloud_upload, color: Colors.blue),
-              ),
-              title: Text(t('webdav.title', loc2)),
-              subtitle: Text(t('backup.webdavSub', loc2)),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const WebdavSettingsPage()),
-              ),
-            ),
-          ),
+          _buildWebdavCard(context, ref, loc2),
         ],
       ),
     );
   }
 
-  /// ─── 本地备份 ───
-  Future<void> _localBackup(BuildContext context, WidgetRef ref) async {
-    AppToast.loading(context, t('backup.backingUp', ref.read(localeCodeProvider)));
-    try {
-      final path = await LocalBackupService.backupToDownloads();
-      AppToast.dismiss(context);
-      final fileName = path.split(Platform.pathSeparator).last;
-      if (context.mounted) {
-        AppToast.capsule(context, t('backup.savedToDownloads', ref.read(localeCodeProvider)).replaceAll('{name}', fileName), Colors.green);
-      }
-    } catch (e) {
-      AppToast.dismiss(context);
-      final msg = e.toString().replaceAll('Exception: ', '');
-      if (context.mounted) {
-        AppToast.bottom(context, '${t('backup.failed', ref.read(localeCodeProvider))}: $msg', Colors.red, seconds: 5);
-      }
+  Widget _buildSectionTitle(String text, ThemeData theme) {
+    return Text(
+      text,
+      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+    );
+  }
+
+  Widget _buildLocalBackupCard(BuildContext context, WidgetRef ref, String loc2) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _buildIconContainer(Colors.teal, Icons.computer),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    t('backup.localDesc', loc2),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _localBackup(context, ref),
+                    icon: const Icon(Icons.download),
+                    label: Text(t('backup.localBackup', loc2)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _localRestore(context, ref, loc2),
+                    icon: const Icon(Icons.upload),
+                    label: Text(t('backup.localRestore', loc2)),
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.teal),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebdavCard(BuildContext context, WidgetRef ref, String loc2) {
+    return Card(
+      child: ListTile(
+        leading: _buildIconContainer(Colors.blue, Icons.cloud_upload),
+        title: Text(t('webdav.title', loc2)),
+        subtitle: Text(t('backup.webdavSub', loc2)),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const WebdavSettingsPage()),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIconContainer(Color color, IconData icon) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon, color: color),
+    );
+  }
+
+  void _dismissAndShowError(BuildContext context, String message) {
+    AppToast.dismiss(context);
+    if (context.mounted) {
+      AppToast.bottom(context, message, Colors.red, seconds: 5);
     }
   }
 
-  /// ─── 本地恢复 ───
-  Future<void> _localRestore(BuildContext context, WidgetRef ref, String loc2) async {
-    // 1. 文件选择
-    AppToast.loading(context, '正在打开文件选择器...');
+  void _dismissAndShowSuccess(BuildContext context, String message) {
+    AppToast.dismiss(context);
+    if (context.mounted) {
+      AppToast.capsule(context, message, Colors.green);
+    }
+  }
+
+  Future<void> _localBackup(BuildContext context, WidgetRef ref) async {
+    final loc = ref.read(localeCodeProvider);
+    AppToast.loading(context, t('backup.backingUp', loc));
+
     try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.any,
-        allowMultiple: false,
+      final path = await LocalBackupService.backupToDownloads();
+      final fileName = path.split(Platform.pathSeparator).last;
+      _dismissAndShowSuccess(
+        context,
+        t('backup.savedToDownloads', loc).replaceAll('{name}', fileName),
       );
+    } catch (e) {
+      final msg = e.toString().replaceAll('Exception: ', '');
+      _dismissAndShowError(
+        context,
+        '${t('backup.failed', loc)}: $msg',
+      );
+    }
+  }
+
+  Future<void> _localRestore(BuildContext context, WidgetRef ref, String loc2) async {
+    AppToast.loading(context, t('backup.openingFilePicker', loc2));
+
+    try {
+      final result = await FilePicker.pickFiles(type: FileType.any, allowMultiple: false);
       AppToast.dismiss(context);
 
-      if (result == null || result.files.isEmpty) return; // 用户取消
+      if (result == null || result.files.isEmpty) return;
 
       final filePath = result.files.single.path;
       if (filePath == null) {
         if (context.mounted) {
-          AppToast.bottom(context, '❌ 恢复失败: 无法获取文件路径', Colors.red);
+          AppToast.bottom(context, '❌ ${t('backup.restoreFailedFile', loc2)}', Colors.red);
         }
         return;
       }
 
-      // 2. 解析备份文件
-      List<AssetItem> remoteItems;
-      try {
-        remoteItems = await LocalBackupService.restoreFromFile(filePath);
-      } catch (e) {
-        final msg = e.toString().replaceAll('Exception: ', '');
-        if (context.mounted) {
-          AppToast.bottom(context, '❌ 恢复失败: $msg', Colors.red, seconds: 5);
-        }
-        return;
-      }
+      final remoteItems = await _parseBackupFile(context, filePath, loc2);
+      if (remoteItems == null) return;
 
-      // 3. 选择恢复模式
-      final fileName = result.files.single.name;
-      if (!context.mounted) return;
-      final mode = await showDialog<String>(
-        context: context,
-        barrierDismissible: true,
-        builder: (ctx) => AlertDialog(
-          title: Text(t('restore.title', loc2)),
-          content: Text(t('restore.content', loc2).replaceAll('{name}', fileName).replaceAll('{n}', remoteItems.length.toString())),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(t('confirm.cancel', loc2)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, 'replace'),
-              child: Text(t('restore.replace', loc2)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, 'merge'),
-              child: Text(t('restore.merge', loc2)),
-            ),
-          ],
-        ),
-      );
-      if (mode == null || !context.mounted) return;
+      final mode = await _selectRestoreMode(context, loc2, result.files.single.name, remoteItems.length);
+      if (mode == null) return;
 
-      // 4. 二次确认
-      final confirmed = await showDialog<bool>(
-        context: context,
-        barrierDismissible: true,
-        builder: (ctx) => AlertDialog(
-          title: Text(t('restore.confirmTitle', loc2)),
-          content: Text(
-            mode == 'replace'
-                ? t('restore.confirmReplace', loc2)
-                : t('restore.confirmMerge', loc2),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(t('confirm.cancel', loc2)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: Text(t('restore.confirmButton', loc2)),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true || !context.mounted) return;
+      if (!await _confirmRestore(context, loc2, mode)) return;
 
-      // 5. 执行恢复
-      AppToast.loading(context, t('backup.restoring', ref.read(localeCodeProvider)).replaceAll('{n}', '${remoteItems.length}'));
-      try {
-        final db = DatabaseManager.instance;
-        if (mode == 'replace') {
-          await db.replaceAll(remoteItems);
-        } else {
-          await db.mergeDeduplicated(remoteItems);
-        }
-        ref.bumpVersion();
-        AppToast.dismiss(context);
-        if (context.mounted) {
-          AppToast.capsule(context, t('backup.restored', ref.read(localeCodeProvider)).replaceAll('{n}', '${remoteItems.length}'), Colors.green);
-        }
-      } catch (e) {
-        AppToast.dismiss(context);
-        final msg = e.toString().replaceAll('Exception: ', '');
-        if (context.mounted) {
-          AppToast.bottom(context, '${t('backup.failed', ref.read(localeCodeProvider))}: $msg', Colors.red, seconds: 5);
-        }
-      }
+      await _executeRestore(context, ref, loc2, mode, remoteItems);
     } catch (e) {
-      AppToast.dismiss(context);
-      if (context.mounted) {
-        AppToast.bottom(context, '${t('backup.failed', ref.read(localeCodeProvider))}: ${e.toString().replaceAll('Exception: ', '')}', Colors.red, seconds: 5);
-      }
+      _dismissAndShowError(
+        context,
+        '${t('backup.failed', loc2)}: ${_translateError(e.toString().replaceAll('Exception: ', ''), loc2)}',
+      );
     }
   }
+
+  Future<List<AssetItem>?> _parseBackupFile(BuildContext context, String filePath, String loc2) async {
+    try {
+      return await LocalBackupService.restoreFromFile(filePath);
+    } catch (e) {
+      final msg = e.toString().replaceAll('Exception: ', '');
+      _dismissAndShowError(context, '❌ ${t('restore.failed', loc2)}: ${_translateError(msg, loc2)}');
+      return null;
+    }
+  }
+
+  Future<String?> _selectRestoreMode(
+    BuildContext context,
+    String loc2,
+    String fileName,
+    int itemCount,
+  ) async {
+    if (!context.mounted) return null;
+
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        title: Text(t('restore.title', loc2)),
+        content: Text(
+          t('restore.content', loc2)
+              .replaceAll('{name}', fileName)
+              .replaceAll('{n}', itemCount.toString()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t('confirm.cancel', loc2))),
+          TextButton(onPressed: () => Navigator.pop(ctx, 'replace'), child: Text(t('restore.replace', loc2))),
+          TextButton(onPressed: () => Navigator.pop(ctx, 'merge'), child: Text(t('restore.merge', loc2))),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _confirmRestore(BuildContext context, String loc2, String mode) async {
+    if (!context.mounted) return false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        title: Text(t('restore.confirmTitle', loc2)),
+        content: Text(mode == 'replace' ? t('restore.confirmReplace', loc2) : t('restore.confirmMerge', loc2)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t('confirm.cancel', loc2))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(t('restore.confirmButton', loc2)),
+          ),
+        ],
+      ),
+    );
+
+    return confirmed == true && context.mounted;
+  }
+
+  Future<void> _executeRestore(
+    BuildContext context,
+    WidgetRef ref,
+    String loc2,
+    String mode,
+    List<AssetItem> remoteItems,
+  ) async {
+    final loc = ref.read(localeCodeProvider);
+    AppToast.loading(context, t('backup.restoring', loc).replaceAll('{n}', remoteItems.length.toString()));
+
+    try {
+      final db = DatabaseManager.instance;
+      if (mode == 'replace') {
+        await db.replaceAll(remoteItems);
+      } else {
+        await db.mergeDeduplicated(remoteItems);
+      }
+      ref.bumpVersion();
+      _dismissAndShowSuccess(
+        context,
+        t('backup.restored', loc).replaceAll('{n}', remoteItems.length.toString()),
+      );
+    } catch (e) {
+      final msg = e.toString().replaceAll('Exception: ', '');
+      _dismissAndShowError(
+        context,
+        '${t('backup.failed', loc)}: ${_translateError(msg, loc)}',
+      );
+    }
+  }
+}
+
+String _translateError(String msg, String locale) {
+  if (msg.startsWith('backup.err')) {
+    final parts = msg.split(':');
+    final key = parts[0];
+    if (parts.length > 1) {
+      return t(key, locale).replaceAll('{i}', parts[1]);
+    }
+    return t(key, locale);
+  }
+  if (msg.startsWith('webdav.err')) {
+    final parts = msg.split(':');
+    final key = parts[0];
+    if (parts.length > 1) {
+      return t(key, locale).replaceAll('{url}', parts[1]).replaceAll('{code}', parts[1]);
+    }
+    return t(key, locale);
+  }
+  if (msg.startsWith('category.err')) {
+    return t(msg, locale);
+  }
+  return msg;
 }

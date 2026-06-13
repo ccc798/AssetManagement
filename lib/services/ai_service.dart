@@ -1,5 +1,5 @@
 ﻿import 'dart:convert';
-import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import '../core/i18n/translations.dart';
 import '../data/database/config_dao.dart';
@@ -13,6 +13,10 @@ import '../data/models/backup_config.dart';
 class AiService {
   final Dio _dio = Dio();
   final ConfigDao _configDao = ConfigDao();
+  
+  /// AI 识别结果缓存（key: 图片MD5哈希, value: 识别结果）
+  static final Map<String, List<Map<String, dynamic>>> _recognitionCache = {};
+  static const int _maxCacheSize = 50;
 
   AiService() {
     _dio.options = _dio.options.copyWith(
@@ -24,13 +28,40 @@ class AiService {
     );
   }
 
-  /// 获取当前 AI 配置
+  /// 计算图片数据的 MD5 哈希值作为缓存键
+  String _computeImageHash(List<int> bytes) {
+    return md5.convert(bytes).toString();
+  }
+
+  /// 从缓存获取识别结果
+  List<Map<String, dynamic>>? _getFromCache(List<int> imageBytes) {
+    final hash = _computeImageHash(imageBytes);
+    return _recognitionCache[hash];
+  }
+
+  /// 将识别结果存入缓存
+  void _addToCache(List<int> imageBytes, List<Map<String, dynamic>> result) {
+    final hash = _computeImageHash(imageBytes);
+    _recognitionCache[hash] = result;
+    
+    // 清理过期缓存，保持最大缓存数量
+    while (_recognitionCache.length > _maxCacheSize) {
+      _recognitionCache.remove(_recognitionCache.keys.first);
+    }
+  }
+
+  /// 清除缓存（用于配置变更时）
+  void clearCache() {
+    _recognitionCache.clear();
+  }
+
+  /// 获取缓存大小
+  int get cacheSize => _recognitionCache.length;
+
   Future<BackupConfig> _getConfig() async {
     return _configDao.getConfig();
   }
 
-  /// 标准化 AI API 基础 URL — 确保以 /v1 结尾
-  /// 如果路径已包含版本段（/v1、/v2 等）则不再追加
   String _normalizeBaseUrl(String url) {
     var u = url.trim();
     u = u.replaceAll(',', '.').replaceAll('，', '.');
@@ -42,7 +73,6 @@ class AiService {
     return u;
   }
 
-  /// 构建请求头
   Future<Map<String, String>> _headers() async {
     final config = await _getConfig();
     return {
@@ -51,17 +81,14 @@ class AiService {
     };
   }
 
-  /// 构建请求 URL（自动标准化 base URL）
   String _buildUrl(String baseUrl, String path) {
     return '${_normalizeBaseUrl(baseUrl)}$path';
   }
 
-  /// 带自动重试的 POST 请求（连接类异常重试 1 次）
   Future<Response> _retryPost(String url, {required Options options, required dynamic data}) async {
     try {
       return await _dio.post(url, options: options, data: data);
     } on DioException catch (e) {
-      // 连接被拒绝 → 等待 1.5 秒后重试一次
       if (e.type == DioExceptionType.connectionError &&
           e.message != null &&
           e.message!.contains('Connection refused')) {
@@ -72,26 +99,8 @@ class AiService {
     }
   }
 
-  /// 从购物截图识别物品信息
-  ///
-  /// [imageBytes] 图片的字节数据
-  /// 返回物品列表（支持一笔订单多件物品）
-  Future<List<Map<String, dynamic>>> recognizeFromScreenshot(
-    List<int> imageBytes, {
-    String? fileName,
-    String locale = 'zh',
-  }) async {
-    final config = await _getConfig();
-    if (config.aiApiKey.isEmpty) {
-      return [{'error': '请先在设置中配置 AI API Key'}];
-    }
-
-    // 将图片转为 Base64
-    final base64Image = base64Encode(imageBytes);
-
-    final url = _buildUrl(config.aiBaseUrl, '/chat/completions');
-
-    final prompt = '''
+  /// OCR 提示词常量
+  static const String _ocrPrompt = '''
 You are a shopping receipt OCR assistant. Extract all purchased item information from this receipt screenshot.
 
 Return a JSON array of items. Each item must follow this structure:
@@ -129,80 +138,149 @@ Additional rules:
 - Leave uncertain fields as empty string or null
 ''';
 
+  /// 构建图片识别请求数据
+  Map<String, dynamic> _buildImageRecognitionRequest(
+    String model,
+    String base64Image,
+    int maxTokens,
+    double temperature,
+  ) {
+    return {
+      'model': model,
+      'messages': [
+        {
+          'role': 'system',
+          'content': _ocrPrompt,
+        },
+        {
+          'role': 'user',
+          'content': [
+            {
+              'type': 'image_url',
+              'image_url': {
+                'url': 'data:image/jpeg;base64,$base64Image',
+                'detail': 'high',
+              },
+            },
+          ],
+        },
+      ],
+      'max_tokens': maxTokens,
+      'temperature': temperature,
+    };
+  }
+
+  /// 解析 AI 响应内容
+  String? _parseResponseContent(dynamic responseData) {
+    return responseData?['choices']?[0]?['message']?['content']?.toString().trim();
+  }
+
+  /// 格式化识别结果
+  List<Map<String, dynamic>> _formatRecognitionResult(String jsonStr) {
+    final parsed = jsonDecode(jsonStr);
+    
+    if (parsed is List) {
+      final items = parsed.cast<Map<String, dynamic>>();
+      for (final item in items) {
+        item['aiRawData'] = jsonEncode(items);
+        item['quantity'] = (item['quantity'] as num?)?.toInt() ?? 1;
+      }
+      return items;
+    }
+    
+    if (parsed is Map) {
+      final single = Map<String, dynamic>.from(parsed);
+      single['aiRawData'] = jsonEncode(single);
+      single['quantity'] = (single['quantity'] as num?)?.toInt() ?? 1;
+      return [single];
+    }
+    
+    return [];
+  }
+
+  /// 从购物截图识别物品信息
+  Future<List<Map<String, dynamic>>> recognizeFromScreenshot(
+    List<int> imageBytes, {
+    String? fileName,
+    String locale = 'zh',
+    bool skipCache = false,
+  }) async {
+    final config = await _getConfig();
+    
+    // 检查 API Key
+    final validationError = _validateConfig(config, locale);
+    if (validationError != null) {
+      return [validationError];
+    }
+
+    // 检查缓存
+    if (!skipCache) {
+      final cached = _getFromCache(imageBytes);
+      if (cached != null) {
+        return cached;
+      }
+    }
+
     try {
+      // 构建请求
+      final url = _buildUrl(config.aiBaseUrl, '/chat/completions');
+      final base64Image = base64Encode(imageBytes);
+      final requestData = _buildImageRecognitionRequest(
+        config.aiModel,
+        base64Image,
+        config.aiMaxTokens,
+        config.aiTemperature,
+      );
+
+      // 发送请求
       final response = await _retryPost(
         url,
         options: Options(headers: await _headers()),
-        data: {
-          'model': config.aiModel,
-          'messages': [
-            {
-              'role': 'system',
-              'content': prompt,
-            },
-            {
-              'role': 'user',
-              'content': [
-                {
-                  'type': 'image_url',
-                  'image_url': {
-                    'url': 'data:image/jpeg;base64,$base64Image',
-                    'detail': 'high',
-                  },
-                },
-              ],
-            },
-          ],
-          'max_tokens': config.aiMaxTokens,
-          'temperature': config.aiTemperature,
-        },
+        data: requestData,
       );
 
-      final result = response.data;
-      final content = result['choices']?[0]?['message']?['content'] ?? '';
+      // 解析响应
+      final content = _parseResponseContent(response.data);
+      if (content == null || content.isEmpty) {
+        return [_createErrorResponse(t('ai.testFailed', locale))];
+      }
 
-      // 提取 JSON
+      // 提取并格式化 JSON
       final jsonStr = _extractJson(content);
       if (jsonStr != null) {
-        final parsed = jsonDecode(jsonStr);
-
-        // AI 可能返回数组（多物品）或单个对象（单物品），统一为列表
-        if (parsed is List) {
-          final items = parsed.cast<Map<String, dynamic>>();
-          for (final item in items) {
-            item['aiRawData'] = jsonEncode(items);
-            item['quantity'] = (item['quantity'] as num?)?.toInt() ?? 1;
-          }
-          return items;
-        }
-        if (parsed is Map) {
-          final single = Map<String, dynamic>.from(parsed);
-          single['aiRawData'] = jsonEncode(single);
-          single['quantity'] = (single['quantity'] as num?)?.toInt() ?? 1;
-          return [single];
+        final formatted = _formatRecognitionResult(jsonStr);
+        if (formatted.isNotEmpty) {
+          // 存入缓存
+          _addToCache(imageBytes, formatted);
+          return formatted;
         }
       }
 
-      return [{
-        'error': t('ai.testFailed', locale),
-        'rawContent': content,
-      }];
+      return [_createErrorResponse(t('ai.testFailed', locale), rawContent: content)];
     } on DioException catch (e) {
-      return [{
-        'error': '${t('ai.testFailed', locale)}: ${e.message}',
-        'rawContent': e.response?.toString() ?? '',
-      }];
+      return [_createErrorResponse('${t('ai.testFailed', locale)}: ${e.message}', rawContent: e.response?.toString())];
     } catch (e) {
-      return [{
-        'error': '${t('ai.testFailed', locale)}: $e',
-      }];
+      return [_createErrorResponse('${t('ai.testFailed', locale)}: $e')];
     }
   }
 
-  /// 由 AI 整理和补充物品信息
-  ///
-  /// [itemInfo] 包含部分物品信息的 Map
-  /// 返回补充后的完整物品信息
+  /// 验证配置
+  Map<String, dynamic>? _validateConfig(BackupConfig config, String locale) {
+    if (config.aiApiKey.isEmpty) {
+      return {'error': t('ai.errNoApiKey', locale)};
+    }
+    return null;
+  }
+
+  /// 创建错误响应
+  Map<String, dynamic> _createErrorResponse(String error, {String? rawContent}) {
+    final response = {'error': error};
+    if (rawContent != null && rawContent.isNotEmpty) {
+      response['rawContent'] = rawContent;
+    }
+    return response;
+  }
+
   Future<Map<String, dynamic>> enrichItemInfo(
     Map<String, dynamic> itemInfo,
   ) async {
@@ -256,23 +334,19 @@ Return ONLY the JSON, no additional explanation.
       final jsonStr = _extractJson(content);
       if (jsonStr != null) {
         final enriched = jsonDecode(jsonStr) as Map<String, dynamic>;
-    // 合并，以 AI 补充的覆盖原始信息
-    return {...itemInfo, ...enriched};
+        return {...itemInfo, ...enriched};
       }
     } catch (_) {}
 
     return itemInfo;
   }
 
-  /// 从文本中提取 JSON
   String? _extractJson(String text) {
-    // 尝试直接解析
     try {
       jsonDecode(text);
       return text;
     } catch (_) {}
 
-    // 查找 ```json ... ``` 块
     final jsonBlock = RegExp(r'```(?:json)?\n?(.*?)\n?```', dotAll: true);
     final match = jsonBlock.firstMatch(text);
     if (match != null) {
@@ -282,7 +356,6 @@ Return ONLY the JSON, no additional explanation.
       } catch (_) {}
     }
 
-    // 查找 `{ }` 包裹的最外层
     final braceStart = text.indexOf('{');
     if (braceStart >= 0) {
       final braceEnd = text.lastIndexOf('}');
@@ -294,7 +367,6 @@ Return ONLY the JSON, no additional explanation.
       }
     }
 
-    // 查找 `[ ]` 包裹
     final bracketStart = text.indexOf('[');
     if (bracketStart >= 0) {
       final bracketEnd = text.lastIndexOf(']');
@@ -309,9 +381,7 @@ Return ONLY the JSON, no additional explanation.
     return null;
   }
 
-  /// 测试 AI 连接 + 多模态图片识别能力
-  ///
-  /// 返回 null = 全部正常，非 null = 错误或警告
+  /// 测试 AI 连接
   Future<String?> testConnection({String locale = 'zh'}) async {
     try {
       final config = await _getConfig();
@@ -320,91 +390,107 @@ Return ONLY the JSON, no additional explanation.
       final url = _buildUrl(config.aiBaseUrl, '/chat/completions');
       final headers = await _headers();
 
-      // ---------- Step 1: Basic connection test ----------
+      // Step 1: Basic connection test
       final baseResp = await _retryPost(
         url,
         options: Options(headers: headers),
         data: {
           'model': config.aiModel,
-          'messages': [
-            {'role': 'user', 'content': 'Hi'},
-          ],
+          'messages': [{'role': 'user', 'content': 'Hi'}],
           'max_tokens': 10,
         },
       );
 
-      if (baseResp.statusCode != 200) {
-        if (baseResp.statusCode == 401) return t('ai.errInvalidKey', locale);
-        if (baseResp.statusCode == 404) return t('ai.errNotFound', locale);
-        if (baseResp.statusCode == 429) return t('ai.errTooMany', locale);
-        if (baseResp.statusCode == 500) return t('ai.errServerError', locale);
-        return 'HTTP ${baseResp.statusCode}';
-      }
+      final baseError = _checkBasicResponse(baseResp, locale);
+      if (baseError != null) return baseError;
 
-      // ---------- Step 2: Multimodal image recognition test ----------
-      // 使用 20x20 像素的蓝色实心 PNG 测试多模态能力
-      // 注意：1x1 像素图片会被部分模型拒绝（尺寸过小），因此使用 20x20
-      final testPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAnSURBVDhPY5Cb8P8/NTEDugCleNRAyvGogZTjUQMpx6MGUo4Hv4EA/cEs/Z9QHFEAAAAASUVORK5CYII=';
-
-      try {
-        final visionResp = await _retryPost(
-          url,
-          options: Options(headers: headers),
-          data: {
-            'model': config.aiModel,
-            'messages': [
-              {
-                'role': 'user',
-                'content': [
-                  {'type': 'text', 'text': 'Describe this image'},
-                  {
-                    'type': 'image_url',
-                    'image_url': {
-                      'url': 'data:image/png;base64,$testPngBase64',
-                      'detail': 'low',
-                    },
-                  },
-                ],
-              },
-            ],
-            'max_tokens': 50,
-          },
-        );
-
-        if (visionResp.statusCode == 200) {
-          return null; // ✓ 模型支持多模态
-        }
-        if (visionResp.statusCode == 400) {
-          return t('ai.errNoVision', locale);
-        }
-        return t('ai.errVisionFailed', locale).replaceAll('{code}', '${visionResp.statusCode}');
-      } on DioException catch (e) {
-        if (e.type == DioExceptionType.badResponse &&
-            e.response?.statusCode == 400) {
-          return t('ai.errNoVision', locale);
-        }
-        return t('ai.errVisionAbnormal', locale);
-      }
+      // Step 2: Multimodal image recognition test
+      return await _testMultimodalCapability(url, headers, config.aiModel, locale);
     } on DioException catch (e) {
-      if (e.type == DioExceptionType.connectionTimeout) return t('ai.errTimeout', locale);
-      if (e.type == DioExceptionType.receiveTimeout) return t('ai.errReceiveTimeout', locale);
-      if (e.type == DioExceptionType.connectionError) {
-        if (e.message != null && e.message!.contains('Connection refused')) {
-          return t('ai.errConnectionRefused', locale);
-        }
-        return t('ai.errCantConnect', locale).replaceAll('{msg}', '${e.message}');
-      }
-      if (e.type == DioExceptionType.badResponse) {
-        final code = e.response?.statusCode;
-        if (code == 400) return t('ai.errBadRequest', locale);
-        if (code == 401) return t('ai.errInvalidKey', locale);
-        if (code == 404) return t('ai.errNotFound', locale);
-        if (code == 429) return t('ai.errTooMany', locale);
-        return t('ai.errServerError2', locale).replaceAll('{code}', '$code');
-      }
-      return '${t('ai.testFailed', locale)}: ${e.message}';
+      return _handleDioException(e, locale);
     } catch (e) {
       return '${t('ai.testFailed', locale)}: $e';
     }
+  }
+
+  /// 检查基础连接响应
+  String? _checkBasicResponse(Response response, String locale) {
+    if (response.statusCode == 200) return null;
+    
+    if (response.statusCode == 401) return t('ai.errInvalidKey', locale);
+    if (response.statusCode == 404) return t('ai.errNotFound', locale);
+    if (response.statusCode == 429) return t('ai.errTooMany', locale);
+    if (response.statusCode == 500) return t('ai.errServerError', locale);
+    return 'HTTP ${response.statusCode}';
+  }
+
+  /// 测试多模态能力
+  Future<String?> _testMultimodalCapability(
+    String url,
+    Map<String, String> headers,
+    String model,
+    String locale,
+  ) async {
+    const testPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAnSURBVDhPY5Cb8P8/NTEDugCleNRAyvGogZTjUQMpx6MGUo4Hv4EA/cEs/Z9QHFEAAAAASUVORK5CYII=';
+
+    try {
+      final visionResp = await _retryPost(
+        url,
+        options: Options(headers: headers),
+        data: {
+          'model': model,
+          'messages': [
+            {
+              'role': 'user',
+              'content': [
+                {'type': 'text', 'text': 'Describe this image'},
+                {
+                  'type': 'image_url',
+                  'image_url': {
+                    'url': 'data:image/png;base64,$testPngBase64',
+                    'detail': 'low',
+                  },
+                },
+              ],
+            },
+          ],
+          'max_tokens': 50,
+        },
+      );
+
+      if (visionResp.statusCode == 200) return null;
+      if (visionResp.statusCode == 400) return t('ai.errNoVision', locale);
+      return t('ai.errVisionFailed', locale).replaceAll('{code}', '${visionResp.statusCode}');
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.badResponse && e.response?.statusCode == 400) {
+        return t('ai.errNoVision', locale);
+      }
+      return t('ai.errVisionAbnormal', locale);
+    }
+  }
+
+  /// 处理 Dio 异常
+  String _handleDioException(DioException e, String locale) {
+    if (e.type == DioExceptionType.connectionTimeout) {
+      return t('ai.errTimeout', locale);
+    }
+    if (e.type == DioExceptionType.receiveTimeout) {
+      return t('ai.errReceiveTimeout', locale);
+    }
+    if (e.type == DioExceptionType.connectionError) {
+      if (e.message != null && e.message!.contains('Connection refused')) {
+        return t('ai.errConnectionRefused', locale);
+      }
+      return t('ai.errCantConnect', locale).replaceAll('{msg}', '${e.message}');
+    }
+    if (e.type == DioExceptionType.badResponse) {
+      final code = e.response?.statusCode;
+      if (code == 400) return t('ai.errBadRequest', locale);
+      if (code == 401) return t('ai.errInvalidKey', locale);
+      if (code == 404) return t('ai.errNotFound', locale);
+      if (code == 429) return t('ai.errTooMany', locale);
+      return t('ai.errServerError2', locale).replaceAll('{code}', '$code');
+    }
+    return '${t('ai.testFailed', locale)}: ${e.message}';
   }
 }

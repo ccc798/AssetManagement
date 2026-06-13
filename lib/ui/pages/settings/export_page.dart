@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/translations.dart';
 import '../../../core/utils/csv_export.dart';
-import '../../../data/database/asset_dao.dart';
 import '../../providers/asset_provider.dart';
 import '../../widgets/app_toast.dart';
 
@@ -155,7 +154,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
     try {
       final loc = ref.read(localeCodeProvider);
       if (Platform.isWindows) {
-        final path = await CsvExporter.exportToDesktop(items, locale: loc);
+        await CsvExporter.exportToDesktop(items, locale: loc);
         if (mounted) AppToast.capsule(context, t('export.toDesktop', ref.read(localeCodeProvider)), Colors.green);
       } else {
         final path = await CsvExporter.exportToDownloads(items, locale: loc);

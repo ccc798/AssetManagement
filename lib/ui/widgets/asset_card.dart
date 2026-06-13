@@ -5,7 +5,6 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/i18n/translations.dart';
 import '../../core/theme/app_icons.dart';
-import '../../core/utils/date_utils.dart';
 import '../../core/utils/money_utils.dart';
 import '../../data/models/asset_item.dart';
 
@@ -76,7 +75,7 @@ class AssetCard extends ConsumerWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: _getCategoryColor(item.category).withOpacity(0.1),
+                    color: _getCategoryColor(item.category).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(

@@ -8,8 +8,6 @@ class AppDateUtils {
   static final DateFormat _dateTimeFmt = DateFormat('yyyy-MM-dd HH:mm:ss');
   static final DateFormat _monthFmt = DateFormat('yyyy-MM');
   static final DateFormat _yearFmt = DateFormat('yyyy');
-  static final DateFormat _shortFmt = DateFormat('MM/dd');
-  static final DateFormat _weekdayFmt = DateFormat('EEEE');
 
   /// 格式化日期
   static String formatDate(DateTime date) => _dateFmt.format(date);

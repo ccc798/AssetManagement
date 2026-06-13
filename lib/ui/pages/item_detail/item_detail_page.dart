@@ -78,7 +78,7 @@ class ItemDetailPage extends ConsumerWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.1),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
@@ -108,7 +108,7 @@ class ItemDetailPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${t('detail.purchased', loc).replaceAll('{date}', AppDateUtils.formatLocale(item.purchaseDate ?? DateTime.now(), loc))}',
+                    t('detail.purchased', loc).replaceAll('{date}', AppDateUtils.formatLocale(item.purchaseDate ?? DateTime.now(), loc)),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -120,7 +120,7 @@ class ItemDetailPage extends ConsumerWidget {
                           size: 14, color: theme.colorScheme.onSurfaceVariant),
                       const SizedBox(width: 4),
                       Text(
-                        '${t('detail.usedDays', loc).replaceAll('{days}', '$days')}',
+                        t('detail.usedDays', loc).replaceAll('{days}', '$days'),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -151,7 +151,7 @@ class ItemDetailPage extends ConsumerWidget {
         Icon(Icons.circle, size: 10, color: color),
         const SizedBox(width: 4),
         Text(
-          '${t('detail.remainingValue', loc).replaceAll('{pct}', '${(ratio * 100).toInt()}')}',
+          t('detail.remainingValue', loc).replaceAll('{pct}', '${(ratio * 100).toInt()}'),
           style: theme.textTheme.bodySmall?.copyWith(
             color: color,
             fontWeight: FontWeight.w600,
@@ -194,7 +194,7 @@ class ItemDetailPage extends ConsumerWidget {
             if (item.rating > 0)
               _detailRow(
                 t('detail.rating', loc),
-                '${'⭐' * item.rating}',
+                '⭐' * item.rating,
                 Icons.star,
               ),
             if (item.warrantyPeriod != null && item.warrantyPeriod!.isNotEmpty)
@@ -321,8 +321,8 @@ class ItemDetailPage extends ConsumerWidget {
             const SizedBox(height: 4),
             Text(
               t('detail.usageProgress', loc)
-                .replaceAll('{used}', '${(days / item.plannedLifetimeDays * 100).toStringAsFixed(0)}')
-                .replaceAll('{remaining}', '${(item.remainingValueRatio * 100).toStringAsFixed(0)}'),
+                .replaceAll('{used}', (days / item.plannedLifetimeDays * 100).toStringAsFixed(0))
+                .replaceAll('{remaining}', (item.remainingValueRatio * 100).toStringAsFixed(0)),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -399,8 +399,10 @@ class ItemDetailPage extends ConsumerWidget {
               final dao = ref.read(assetDaoProvider);
               await dao.update(item.copyWith(isArchived: true));
               ref.bumpVersion();
-              AppToast.capsule(context, t('toast.archived', loc), Colors.blue);
-              if (context.mounted) Navigator.pop(context);
+              if (context.mounted) {
+                AppToast.capsule(context, t('toast.archived', loc), Colors.blue);
+                Navigator.pop(context);
+              }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.orange),
             child: Text(t('confirm.archive', loc)),

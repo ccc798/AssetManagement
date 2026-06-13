@@ -19,7 +19,7 @@ class AppTheme {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+            side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -27,11 +27,11 @@ class AppTheme {
           fillColor: Colors.grey[50],
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+            borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+            borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -83,7 +83,7 @@ class AppTheme {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.white.withOpacity(0.08)),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -91,11 +91,11 @@ class AppTheme {
           fillColor: const Color(0xFF1E1E1E),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),

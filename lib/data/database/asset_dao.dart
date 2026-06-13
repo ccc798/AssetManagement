@@ -10,6 +10,16 @@ class AssetDao {
     return _db.getAll(includeDeleted: includeDeleted);
   }
 
+  Future<List<AssetItem>> getPaged(int page, int pageSize, {bool includeDeleted = false}) async {
+    await _db.init();
+    return _db.getPaged(page, pageSize, includeDeleted: includeDeleted);
+  }
+
+  Future<int> getCount({bool includeDeleted = false}) async {
+    await _db.init();
+    return _db.getCount(includeDeleted: includeDeleted);
+  }
+
   Future<AssetItem?> getById(int id) async {
     await _db.init();
     return _db.getById(id);

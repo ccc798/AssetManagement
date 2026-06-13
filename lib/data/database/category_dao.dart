@@ -116,7 +116,7 @@ class CategoryDao {
       {String? name, String? icon, String? colorHex}) async {
     await _ensureLoaded();
     final idx = _categories!.indexWhere((c) => c.id == id);
-    if (idx < 0) throw Exception('分类不存在');
+    if (idx < 0) throw Exception('category.errNotFound');
     _categories![idx] = _categories![idx].copyWith(
       name: name,
       icon: icon,
@@ -130,7 +130,7 @@ class CategoryDao {
   Future<void> delete(int id) async {
     await _ensureLoaded();
     final idx = _categories!.indexWhere((c) => c.id == id);
-    if (idx < 0) throw Exception('分类不存在');
+    if (idx < 0) throw Exception('category.errNotFound');
     _categories!.removeAt(idx);
     await _save();
   }

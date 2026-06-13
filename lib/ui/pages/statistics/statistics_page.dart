@@ -4,7 +4,6 @@ import '../../../core/i18n/translations.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/money_utils.dart';
 import '../../providers/asset_provider.dart';
 
@@ -255,7 +254,7 @@ class StatisticsPage extends ConsumerWidget {
                       color: theme.colorScheme.primary,
                       barWidth: 3,
                       dotData: FlDotData(show: true, getDotPainter: (s, p, b, i) => FlDotCirclePainter(radius: 4, color: theme.colorScheme.primary, strokeWidth: 2, strokeColor: Colors.white)),
-                      belowBarData: BarAreaData(show: true, color: theme.colorScheme.primary.withOpacity(0.1)),
+                      belowBarData: BarAreaData(show: true, color: theme.colorScheme.primary.withValues(alpha: 0.1)),
                     ),
                   ],
                 ),

@@ -6,7 +6,6 @@ import '../../../core/i18n/translations.dart';
 import '../../../data/database/config_dao.dart';
 import '../../../data/database/database_manager.dart';
 import '../../../data/models/asset_item.dart';
-import '../../../data/models/backup_config.dart';
 import '../../../services/webdav_service.dart';
 import '../../providers/asset_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -72,7 +71,7 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
       backupIntervalDays: _backupIntervalDays,
     );
     await _configDao.saveConfig(config);
-    ref.refresh(configProvider);
+    ref.invalidate(configProvider);
     if (mounted) {
       AppToast.capsule(context, t('toast.saved', ref.read(localeCodeProvider)), Colors.green);
     }
@@ -84,7 +83,9 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
     await _save();
 
     final error = await _webdavService.testConnection();
-    AppToast.dismiss(context);
+    if (mounted) {
+      AppToast.dismiss(context);
+    }
     setState(() => _isTesting = false);
 
     if (!mounted) return;
@@ -113,7 +114,6 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final loc2 = ref.read(localeCodeProvider);
     return Scaffold(
       appBar: AppBar(
@@ -135,7 +135,7 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
                     decoration: InputDecoration(
                       labelText: t('webdav.url', loc2),
                       hintText: 'https://dav.jianguoyun.com/dav',
-                      prefixIcon: Icon(Icons.cloud),
+                      prefixIcon: const Icon(Icons.cloud),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -144,7 +144,7 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
                     decoration: InputDecoration(
                       labelText: t('webdav.username', loc2),
                       hintText: 'your@email.com',
-                      prefixIcon: Icon(Icons.person),
+                      prefixIcon: const Icon(Icons.person),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -153,7 +153,7 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
                     decoration: InputDecoration(
                       labelText: t('webdav.password', loc2),
                       hintText: t('webdav.password', loc2),
-                      prefixIcon: Icon(Icons.lock),
+                      prefixIcon: const Icon(Icons.lock),
                     ),
                     obscureText: true,
                   ),
@@ -163,7 +163,7 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
                     decoration: InputDecoration(
                       labelText: t('webdav.path', loc2),
                       hintText: '/AssetKeeper',
-                      prefixIcon: Icon(Icons.folder),
+                      prefixIcon: const Icon(Icons.folder),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -262,16 +262,17 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
       Navigator.pop(context); // 关加载
 
       if (backups.isEmpty) {
+        final loc = ref.read(localeCodeProvider);
         showDialog(
           context: context,
           barrierDismissible: true,
           builder: (ctx) => AlertDialog(
-            title: const Text('远程备份'),
-            content: const Text('暂无远程备份文件'),
+            title: Text(t('webdav.remoteBackupTitle', loc)),
+            content: Text(t('webdav.noRemoteBackup', loc)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('取消'),
+                child: Text(t('confirm.cancel', loc)),
               ),
             ],
           ),
@@ -279,11 +280,12 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
         return;
       }
 
+      final loc = ref.read(localeCodeProvider);
       showDialog(
         context: context,
         barrierDismissible: true,
         builder: (ctx) => AlertDialog(
-          title: const Text('远程备份文件'),
+          title: Text(t('webdav.remoteBackupFiles', loc)),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
@@ -312,7 +314,7 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消'),
+              child: Text(t('confirm.cancel', loc)),
             ),
           ],
         ),
@@ -320,16 +322,18 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context); // 关加载
+      final loc = ref.read(localeCodeProvider);
+      final msg = e.toString().replaceAll('Exception: ', '');
       showDialog(
         context: context,
         barrierDismissible: true,
         builder: (ctx) => AlertDialog(
-          title: const Text('连接失败'),
-          content: Text('$e'),
+          title: Text(t('webdav.connectionFailed', loc)),
+          content: Text(_translateWebdavError(msg, loc)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('关闭'),
+              child: Text(t('confirm.close', loc)),
             ),
           ],
         ),
@@ -362,6 +366,7 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
       ),
     );
     if (mode == null) return;
+    if (!mounted) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -447,6 +452,23 @@ class _WebdavSettingsPageState extends ConsumerState<WebdavSettingsPage> {
         AppToast.bottom(context, '${t('restore.failed', ref.read(localeCodeProvider))}: $e', Colors.red);
       }
     }
+  }
+
+  String _translateWebdavError(String msg, String locale) {
+    if (msg.startsWith('webdav.err')) {
+      final parts = msg.split(':');
+      final key = parts[0];
+      if (parts.length > 1) {
+        return t(key, locale)
+            .replaceAll('{url}', parts[1])
+            .replaceAll('{code}', parts[1])
+            .replaceAll('{total}', parts[1])
+            .replaceAll('{dirs}', parts.length > 2 ? parts[2] : '0')
+            .replaceAll('{props}', parts.length > 3 ? parts[3] : '0');
+      }
+      return t(key, locale);
+    }
+    return msg;
   }
 
   String _formatSize(int bytes) {

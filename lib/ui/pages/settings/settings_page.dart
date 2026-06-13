@@ -29,7 +29,7 @@ class SettingsPage extends ConsumerWidget {
               leading: Container(
                 width: 40, height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.indigo.withOpacity(0.1),
+                  color: Colors.indigo.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.auto_awesome, color: Colors.indigo),
@@ -51,7 +51,7 @@ class SettingsPage extends ConsumerWidget {
               leading: Container(
                 width: 40, height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.teal.withOpacity(0.1),
+                  color: Colors.teal.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.file_download, color: Colors.teal),
@@ -73,7 +73,7 @@ class SettingsPage extends ConsumerWidget {
               leading: Container(
                 width: 40, height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
+                  color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.label, color: Colors.orange),
@@ -95,7 +95,7 @@ class SettingsPage extends ConsumerWidget {
               leading: Container(
                 width: 40, height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
+                  color: Colors.purple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.palette, color: Colors.purple),
@@ -117,7 +117,7 @@ class SettingsPage extends ConsumerWidget {
               leading: Container(
                 width: 40, height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.language, color: Colors.green),
@@ -139,7 +139,7 @@ class SettingsPage extends ConsumerWidget {
               leading: Container(
                 width: 40, height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.backup, color: Colors.blue),
@@ -164,14 +164,14 @@ class SettingsPage extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.info_outline),
                   title: const Text('Asset Management'),
-                  subtitle: Text('${t('settings.version', loc2).replaceAll('{ver}', AppConstants.appVersionFull)}'),
+                  subtitle: Text(t('settings.version', loc2).replaceAll('{ver}', AppConstants.appVersionFull)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 ),
                 ListTile(
                   leading: const Icon(Icons.code),
                   title: Text(t('settings.techStack', loc2)),
                   subtitle: Text(t('settings.techStackValue', loc2)),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 ),
                 ListTile(
                   leading: const Icon(Icons.description),

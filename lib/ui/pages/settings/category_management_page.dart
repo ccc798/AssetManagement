@@ -15,7 +15,6 @@ class CategoryManagementPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final loc2 = ref.read(localeCodeProvider);
     final async = ref.watch(allCategoriesProvider);
 
@@ -40,7 +39,7 @@ class CategoryManagementPage extends ConsumerWidget {
               child: ListTile(
                 leading: Container(
                   width: 40, height: 40,
-                  decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+                  decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
                   child: Icon(AppIcons.getIcon(cat.icon), color: color, size: 22),
                 ),
                 title: Text(
@@ -71,7 +70,7 @@ class CategoryManagementPage extends ConsumerWidget {
           },
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('加载失败: $err')),
+        error: (err, _) => Center(child: Text('${t('error.loadFailed', ref.read(localeCodeProvider))}: $err')),
       ),
     );
   }
@@ -121,7 +120,7 @@ class CategoryManagementPage extends ConsumerWidget {
                         child: Container(
                           width: 40, height: 40,
                           decoration: BoxDecoration(
-                            color: isSel ? _parseColor(selectedColor).withOpacity(0.2) : Colors.grey[100],
+                            color: isSel ? _parseColor(selectedColor).withValues(alpha: 0.2) : Colors.grey[100],
                             borderRadius: BorderRadius.circular(10),
                             border: isSel ? Border.all(color: _parseColor(selectedColor), width: 2) : null,
                           ),
@@ -149,7 +148,7 @@ class CategoryManagementPage extends ConsumerWidget {
                             color: c,
                             shape: BoxShape.circle,
                             border: isSel ? Border.all(color: Colors.white, width: 3) : null,
-                            boxShadow: isSel ? [BoxShadow(color: c.withOpacity(0.5), blurRadius: 6)] : null,
+                            boxShadow: isSel ? [BoxShadow(color: c.withValues(alpha: 0.5), blurRadius: 6)] : null,
                           ),
                           child: isSel ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
                         ),

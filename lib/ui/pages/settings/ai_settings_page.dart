@@ -2,7 +2,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/translations.dart';
 import '../../../data/database/config_dao.dart';
-import '../../../data/models/backup_config.dart';
 import '../../../services/ai_service.dart';
 import '../../providers/settings_provider.dart';
 import '../../widgets/app_toast.dart';
@@ -60,7 +59,7 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
       aiMaxTokens: int.tryParse(_maxTokensController.text) ?? 4096,
     );
     await _configDao.saveConfig(config);
-    ref.refresh(configProvider);
+    ref.invalidate(configProvider);
     if (mounted) {
       AppToast.capsule(context, t('toast.saved', ref.read(localeCodeProvider)), Colors.green);
     }
@@ -80,7 +79,7 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
       aiMaxTokens: int.tryParse(_maxTokensController.text) ?? 4096,
     );
     await _configDao.saveConfig(config);
-    ref.refresh(configProvider);
+    ref.invalidate(configProvider);
   }
 
   Future<void> _test() async {
@@ -89,7 +88,9 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
     await _saveSilent();
 
     final error = await AiService().testConnection(locale: ref.read(localeCodeProvider));
-    AppToast.dismiss(context);
+    if (mounted) {
+      AppToast.dismiss(context);
+    }
     setState(() => _isTesting = false);
 
     if (!mounted) return;
@@ -110,7 +111,6 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final loc2 = ref.read(localeCodeProvider);
     return Scaffold(
       appBar: AppBar(
@@ -141,7 +141,7 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
                     decoration: InputDecoration(
                       labelText: t('ai.apiKey', loc2),
                       hintText: 'sk-...',
-                      prefixIcon: Icon(Icons.key),
+                      prefixIcon: const Icon(Icons.key),
                     ),
                     obscureText: true,
                   ),

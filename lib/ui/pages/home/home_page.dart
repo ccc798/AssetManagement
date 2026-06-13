@@ -10,7 +10,6 @@ import '../../widgets/category_chip.dart';
 import '../../widgets/app_toast.dart';
 import '../../../core/operations.dart';
 import '../../../core/utils/money_utils.dart';
-import '../../../core/utils/date_utils.dart';
 import '../../../data/models/asset_item.dart';
 import '../add_item/add_item_page.dart';
 import '../item_detail/item_detail_page.dart';
@@ -32,7 +31,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final sel = ref.watch(selectedCategoryProvider);
         return Scaffold(
       appBar: AppBar(
@@ -67,7 +65,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     controller: _searchController, autofocus: true,
     decoration: InputDecoration(hintText: t('home.searchHint', ref.read(localeCodeProvider)), border: InputBorder.none, filled: false),
     // Note: _buildSearchField uses ref.read because it's called from build which has loc via ref.watch
-    onChanged: (v) { ref.read(searchQueryProvider.notifier).state = v; ref.refresh(searchResultsProvider(v)); },
+    onChanged: (v) { ref.read(searchQueryProvider.notifier).state = v; ref.invalidate(searchResultsProvider(v)); },
   );
 
   Widget _buildStatsBanner() {
@@ -78,7 +76,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         final c = s['totalCount'] as int; final p = s['totalPrice'] as double; final d = s['dailyAvgCost'] as double;
         return Container(
           margin: const EdgeInsets.fromLTRB(16, 8, 16, 0), padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(gradient: LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.primary.withOpacity(0.8)]), borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(gradient: LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)]), borderRadius: BorderRadius.circular(16)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(t('home.totalAssets', ref.read(localeCodeProvider)), style: const TextStyle(color: Colors.white70, fontSize: 12)),
             const SizedBox(height: 4),
@@ -108,7 +106,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       data: (list) => Container(
         height: 56, margin: const EdgeInsets.symmetric(vertical: 8),
         child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), children: [
-          GestureDetector(onTap: () { ref.read(selectedCategoryProvider.notifier).state = null; ref.refresh(filteredByCategoryProvider(null)); },
+          GestureDetector(onTap: () { ref.read(selectedCategoryProvider.notifier).state = null; ref.invalidate(filteredByCategoryProvider(null)); },
             child: Container(
               margin: const EdgeInsets.only(right: 8), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), alignment: Alignment.center,
               decoration: BoxDecoration(color: sel == null ? theme.colorScheme.primary : Colors.transparent, borderRadius: BorderRadius.circular(24),
@@ -118,7 +116,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           ...list.map((cat) => Padding(padding: const EdgeInsets.only(right: 8), child: CategoryChip(
             name: t(AppConstants.getCategoryNameKey(cat.name), ref.read(localeCodeProvider)),
             iconName: cat.icon, colorHex: cat.colorHex, isSelected: sel == cat.name,
-            onTap: () { ref.read(selectedCategoryProvider.notifier).state = cat.name; ref.refresh(filteredByCategoryProvider(cat.name)); },
+            onTap: () { ref.read(selectedCategoryProvider.notifier).state = cat.name; ref.invalidate(filteredByCategoryProvider(cat.name)); },
           ))),
           GestureDetector(onTap: () => ref.read(selectedCategoryProvider.notifier).state = '__archived__',
             child: Container(
@@ -219,9 +217,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           final dao = ref.read(assetDaoProvider);
           await dao.hardDelete(item.id);
           ref.bumpVersion();
-          AppToast.capsule(context, t('toast.hardDeleted', ref.read(localeCodeProvider)), Colors.red);
+          if (mounted) {
+            AppToast.capsule(context, t('toast.hardDeleted', ref.read(localeCodeProvider)), Colors.red);
+          }
         },
-          style: TextButton.styleFrom(foregroundColor: Colors.red), child: Text(t('confirm.hardDelete', ref.read(localeCodeProvider)), style: TextStyle(fontWeight: FontWeight.bold))),
+          style: TextButton.styleFrom(foregroundColor: Colors.red), child: Text(t('confirm.hardDelete', ref.read(localeCodeProvider)), style: const TextStyle(fontWeight: FontWeight.bold))),
       ],
     ));
   }

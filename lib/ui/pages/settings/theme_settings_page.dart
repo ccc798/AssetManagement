@@ -46,12 +46,12 @@ class ThemeSettingsPage extends ConsumerWidget {
             itemCount: presetColorSchemes.length,
             itemBuilder: (ctx, i) {
               final scheme = presetColorSchemes[i];
-              final isSelected = currentSeed.value == scheme.seed.value;
+              final isSelected = currentSeed.toARGB32() == scheme.seed.toARGB32();
               return GestureDetector(
                 onTap: () => _selectColor(ref, scheme.seed),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: scheme.seed.withOpacity(0.15),
+                    color: scheme.seed.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isSelected ? scheme.seed : Colors.transparent,
@@ -68,7 +68,7 @@ class ThemeSettingsPage extends ConsumerWidget {
                           color: scheme.seed,
                           shape: BoxShape.circle,
                           boxShadow: isSelected
-                              ? [BoxShadow(color: scheme.seed.withOpacity(0.5), blurRadius: 8)]
+                              ? [BoxShadow(color: scheme.seed.withValues(alpha: 0.5), blurRadius: 8)]
                               : null,
                         ),
                         child: isSelected
@@ -192,6 +192,6 @@ class ThemeSettingsPage extends ConsumerWidget {
   void _selectColor(WidgetRef ref, Color seed) {
     ref.read(colorSeedProvider.notifier).state = seed;
     // 即时持久化
-    ConfigDao().setColorSeed(seed.value);
+    ConfigDao().setColorSeed(seed.toARGB32());
   }
 }

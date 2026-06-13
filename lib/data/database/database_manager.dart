@@ -5,8 +5,6 @@ import '../models/asset_item.dart';
 import 'package:collection/collection.dart';
 
 /// 基于文件的 JSON 存储管理器
-///
-/// 不使用代码生成，纯 Dart 实现，跨平台兼容
 class DatabaseManager {
   DatabaseManager._();
   static final DatabaseManager instance = DatabaseManager._();
@@ -15,7 +13,6 @@ class DatabaseManager {
   String? _dbPath;
   bool _initialized = false;
 
-  /// 初始化数据库
   Future<void> init() async {
     if (_initialized) return;
     final dir = await getApplicationDocumentsDirectory();
@@ -24,7 +21,6 @@ class DatabaseManager {
     _initialized = true;
   }
 
-  /// 从文件加载数据
   Future<void> _load() async {
     if (_dbPath == null) return;
     final file = File(_dbPath!);
@@ -32,20 +28,16 @@ class DatabaseManager {
       try {
         final content = await file.readAsString();
         final List<dynamic> jsonList = jsonDecode(content);
-        _items = jsonList
-            .map((e) => AssetItem.fromJson(e as Map<String, dynamic>))
-            .toList();
+        _items = jsonList.map((e) => AssetItem.fromJson(e as Map<String, dynamic>)).toList();
       } catch (e) {
         _items = [];
       }
     } else {
-      // 首次运行，初始化预设数据
       _items = [];
       await _save();
     }
   }
 
-  /// 保存到文件
   Future<void> _save() async {
     if (_dbPath == null) return;
     try {
@@ -57,29 +49,74 @@ class DatabaseManager {
     }
   }
 
+  /// 默认排序比较器（按购买日期降序）
+  static int _defaultSort(AssetItem a, AssetItem b) {
+    final aDate = a.purchaseDate ?? DateTime(2000);
+    final bDate = b.purchaseDate ?? DateTime(2000);
+    return bDate.compareTo(aDate);
+  }
+
+  /// 通用过滤方法
+  /// [isDeleted]: null=不限制, true=仅删除, false=未删除
+  /// [isArchived]: null=不限制, true=仅归档, false=未归档
+  List<AssetItem> _filter({
+    bool? isDeleted,
+    bool? isArchived,
+    bool sort = true,
+  }) {
+    _ensureInitialized();
+    
+    var result = _items.where((item) {
+      if (isDeleted != null && item.isDeleted != isDeleted) return false;
+      if (isArchived != null && item.isArchived != isArchived) return false;
+      return true;
+    }).toList();
+
+    if (sort) {
+      result.sort(_defaultSort);
+    }
+    
+    return result;
+  }
+
   /// 获取使用中的物品（未归档 + 未删除）
   List<AssetItem> getAll({bool includeDeleted = false}) {
+    if (includeDeleted) {
+      final list = List<AssetItem>.from(_items);
+      list.sort(_defaultSort);
+      return list;
+    }
+    return _filter(isDeleted: false, isArchived: false);
+  }
+
+  /// 分页获取物品（未归档 + 未删除）
+  /// [page]: 页码，从 0 开始
+  /// [pageSize]: 每页大小
+  List<AssetItem> getPaged(int page, int pageSize, {bool includeDeleted = false}) {
+    final allItems = getAll(includeDeleted: includeDeleted);
+    final start = page * pageSize;
+    if (start >= allItems.length) return [];
+    final end = start + pageSize;
+    return allItems.sublist(start, end > allItems.length ? allItems.length : end);
+  }
+
+  /// 获取物品总数（未归档 + 未删除）
+  int getCount({bool includeDeleted = false}) {
     _ensureInitialized();
     if (includeDeleted) {
-      return List.from(_items);
+      return _items.length;
     }
-    return _items.where((item) => !item.isDeleted && !item.isArchived).toList()
-      ..sort((a, b) {
-        final aDate = a.purchaseDate ?? DateTime(2000);
-        final bDate = b.purchaseDate ?? DateTime(2000);
-        return bDate.compareTo(aDate);
-      });
+    return _items.where((item) => !item.isDeleted && !item.isArchived).length;
   }
 
   /// 获取已归档的物品
   List<AssetItem> getArchived() {
-    _ensureInitialized();
-    return _items.where((item) => item.isArchived && !item.isDeleted).toList()
-      ..sort((a, b) {
-        final aDate = a.purchaseDate ?? DateTime(2000);
-        final bDate = b.purchaseDate ?? DateTime(2000);
-        return bDate.compareTo(aDate);
-      });
+    return _filter(isDeleted: false, isArchived: true);
+  }
+
+  /// 获取已软删除的物品
+  List<AssetItem> getDeleted() {
+    return _filter(isDeleted: true);
   }
 
   /// 按 ID 获取
@@ -98,20 +135,20 @@ class DatabaseManager {
           item.brand.toLowerCase().contains(kw) ||
           item.category.toLowerCase().contains(kw) ||
           item.notes.toLowerCase().contains(kw);
-    }).toList();
+    }).toList()..sort(_defaultSort);
   }
 
   /// 按分类获取（仅活跃物品）
   List<AssetItem> getByCategory(String category) {
     _ensureInitialized();
     return _items.where((item) =>
-        item.category == category && !item.isDeleted && !item.isArchived).toList();
+        item.category == category && !item.isDeleted && !item.isArchived).toList()..sort(_defaultSort);
   }
 
-  /// 按分类获取全部物品（含已删除/已归档，用于统计和删除确认）
+  /// 按分类获取全部物品（含已删除/已归档）
   List<AssetItem> getByCategoryAll(String category) {
     _ensureInitialized();
-    return _items.where((item) => item.category == category).toList();
+    return _items.where((item) => item.category == category).toList()..sort(_defaultSort);
   }
 
   /// 按分类硬删除所有物品
@@ -144,17 +181,6 @@ class DatabaseManager {
     return item;
   }
 
-  /// 获取已软删除的物品
-  List<AssetItem> getDeleted() {
-    _ensureInitialized();
-    return _items.where((item) => item.isDeleted).toList()
-      ..sort((a, b) {
-        final aDate = a.purchaseDate ?? DateTime(2000);
-        final bDate = b.purchaseDate ?? DateTime(2000);
-        return bDate.compareTo(aDate);
-      });
-  }
-
   /// 硬删除（从数据库中彻底移除）
   Future<void> hardDelete(int id) async {
     _ensureInitialized();
@@ -176,66 +202,66 @@ class DatabaseManager {
   }
 
   /// 获取统计数据
-  /// [scope] 'all'=全部 'active'=使用中 'archived'=已归档
-  /// [months] 时间范围月数，0=全部
   Map<String, dynamic> getStatistics({String scope = 'active', int months = 0}) {
     _ensureInitialized();
-    var active = scope == 'all'
-        ? _items.where((item) => !item.isDeleted).toList()
-        : scope == 'archived'
-            ? getArchived()
-            : getAll();
+    
+    final active = switch (scope) {
+      'all' => _filter(isDeleted: false, sort: false),
+      'archived' => getArchived(),
+      _ => getAll(),
+    };
 
-    // 时间过滤
-    if (months > 0) {
-      final cutoff = DateTime.now().subtract(Duration(days: 30 * months));
-      active = active.where((item) {
-        if (item.purchaseDate == null) return false;
-        return item.purchaseDate!.isAfter(cutoff);
-      }).toList();
+    final filtered = months > 0 
+        ? active.where((item) {
+            if (item.purchaseDate == null) return false;
+            final cutoff = DateTime.now().subtract(Duration(days: 30 * months));
+            return item.purchaseDate!.isAfter(cutoff);
+          }).toList()
+        : active;
+
+    if (filtered.isEmpty) {
+      return _emptyStatistics();
     }
 
-    if (active.isEmpty) {
-      return {
-        'totalCount': 0,
-        'totalPrice': 0.0,
-        'avgPrice': 0.0,
-        'maxPrice': 0.0,
-        'minPrice': 0.0,
-        'categoryStats': <String, double>{},
-        'monthlyStats': <String, double>{},
-        'dailyAvgCost': 0.0,
-      };
-    }
+    return _calculateStatistics(filtered);
+  }
 
-    final totalPrice = active.fold<double>(0, (sum, item) => sum + item.price);
-    final prices = active.map((e) => e.price).toList()..sort();
-    final totalDailyCost = active.fold<double>(0, (sum, item) => sum + item.dailyCost);
+  /// 空统计结果
+  Map<String, dynamic> _emptyStatistics() {
+    return {
+      'totalCount': 0,
+      'totalPrice': 0.0,
+      'avgPrice': 0.0,
+      'maxPrice': 0.0,
+      'minPrice': 0.0,
+      'categoryStats': <String, double>{},
+      'monthlyStats': <String, double>{},
+      'dailyAvgCost': 0.0,
+    };
+  }
+
+  /// 计算统计数据
+  Map<String, dynamic> _calculateStatistics(List<AssetItem> items) {
+    final totalPrice = items.fold<double>(0, (sum, item) => sum + item.price);
+    final prices = items.map((e) => e.price).toList()..sort();
+    final totalDailyCost = items.fold<double>(0, (sum, item) => sum + item.dailyCost);
 
     final Map<String, double> categoryStats = {};
-    for (final item in active) {
-      categoryStats.update(
-        item.category,
-        (v) => v + item.price,
-        ifAbsent: () => item.price,
-      );
-    }
-
     final Map<String, double> monthlyStats = {};
-    for (final item in active) {
-      if (item.purchaseDate == null) continue;
-      final key = '${item.purchaseDate!.year}-${item.purchaseDate!.month.toString().padLeft(2, '0')}';
-      monthlyStats.update(
-        key,
-        (v) => v + item.price,
-        ifAbsent: () => item.price,
-      );
+
+    for (final item in items) {
+      categoryStats.update(item.category, (v) => v + item.price, ifAbsent: () => item.price);
+      
+      if (item.purchaseDate != null) {
+        final key = '${item.purchaseDate!.year}-${item.purchaseDate!.month.toString().padLeft(2, '0')}';
+        monthlyStats.update(key, (v) => v + item.price, ifAbsent: () => item.price);
+      }
     }
 
     return {
-      'totalCount': active.length,
+      'totalCount': items.length,
       'totalPrice': totalPrice,
-      'avgPrice': totalPrice / active.length,
+      'avgPrice': totalPrice / items.length,
       'maxPrice': prices.isNotEmpty ? prices.last : 0.0,
       'minPrice': prices.isNotEmpty ? prices.first : 0.0,
       'categoryStats': categoryStats,
@@ -244,35 +270,30 @@ class DatabaseManager {
     };
   }
 
-  /// 用云端数据完全替换本地数据（覆盖模式）
+  /// 用云端数据完全替换本地数据
   Future<void> replaceAll(List<AssetItem> remote) async {
     _ensureInitialized();
     _items = List.from(remote);
     await _save();
   }
 
-  /// 合并云端与本地数据（按 uuid 去重，相同 uuid 以云端为准）
+  /// 合并云端与本地数据（按 uuid 去重）
   Future<void> mergeDeduplicated(List<AssetItem> remote) async {
     _ensureInitialized();
     final localUuids = _items.map((e) => e.uuid).toSet();
-    final remoteUuids = remote.map((e) => e.uuid).toSet();
-
-    // 1. 云端有、本地没有 → 添加
+    
+    // 添加云端有但本地没有的
     final toAdd = remote.where((r) => !localUuids.contains(r.uuid)).toList();
-
-    // 2. 云端和本地都有 → 用云端的替换本地
+    
+    // 合并：用云端数据替换本地相同 uuid 的数据
     final merged = _items.map((local) {
-      final match = remote.where((r) => r.uuid == local.uuid).firstOrNull;
-      return match ?? local;
-    }).toList();
-
-    // 3. 本地有、云端没有 → 保留（已在 merged 中）
-    merged.addAll(toAdd);
+      return remote.firstWhereOrNull((r) => r.uuid == local.uuid) ?? local;
+    }).toList()..addAll(toAdd);
+    
     _items = merged;
     await _save();
   }
 
-  /// 获取数据库文件路径（用于备份）
   Future<String> get dbPath async {
     if (_dbPath != null) return _dbPath!;
     final dir = await getApplicationDocumentsDirectory();
