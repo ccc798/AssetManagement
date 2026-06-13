@@ -2,7 +2,7 @@
 # Asset Management
 
 声明：本项目使用reasonix+deepseek编写而成，项目图标使用豆包AI生产，如果有不符合代码规范或严重bug的地方，一定是本人对编码和reasonix使用不熟悉，并不代表reasonix和deepseek的真实水平。
-本项目的创立之初只是没有找到好用的类似的软件，或者软件没有找到我，制作这个项目也只是为了个人使用，分享出来也只是给大家提供多一个选择。
+本项目的创立之初只是没有找到好用的类似的软件，或者软件没有找到我，制作这个项目也只是为了个人使用，分享出来也只是给大家提供多一个选择。有意见可以提但是水平有限。
 
 > 个人资产管理系统 — 记录、追踪、分析每一笔资产的价值与成本
 > Personal asset management system — track, analyze, and manage every item you own.
@@ -79,6 +79,12 @@
 ### 🖥️ 多平台
 
 Android · Windows · Linux · macOS · iOS
+
+---
+
+## 截图预览 / Screenshots
+
+<img width="702" height="1248" alt="image" src="https://github.com/user-attachments/assets/c9ccef1a-ca25-4714-a9f5-dbacc7054687" />
 
 ---
 
