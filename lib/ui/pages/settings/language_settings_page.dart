@@ -69,7 +69,7 @@ class LanguageSettingsPage extends ConsumerWidget {
       case 'system': return t('language.system', loc);
       case 'zh': return t('language.chinese', loc);
       case 'en': return t('language.english', loc);
-      default: return target; // 新语言暂用代码作为标签
+      default: return t('language.system', loc); // fallback for unknown/new languages
     }
   }
 

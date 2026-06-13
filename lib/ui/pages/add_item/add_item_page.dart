@@ -45,7 +45,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
   int _currentItemIndex = 0;
 
   DateTime _purchaseDate = DateTime.now();
-  String _selectedCategory = '其他';
+  String _selectedCategory = '';
   int _plannedLifetimeDays = 365;
   String _lifetimeUnit = 'days';
   int _rating = 0;
@@ -374,7 +374,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
           labelText: t('add.purchaseDate', ref.read(localeCodeProvider)),
           prefixIcon: Icon(Icons.calendar_today),
         ),
-        child: Text(AppDateUtils.formatCn(_purchaseDate)),
+        child: Text(AppDateUtils.formatLocale(_purchaseDate, ref.read(localeCodeProvider))),
       ),
     );
   }
@@ -554,8 +554,8 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: _warrantyController,
-                    decoration: const InputDecoration(
-                      hintText: '自定义保修期限',
+                    decoration: InputDecoration(
+                      hintText: t('add.warrantyCustomHint', loc),
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       border: OutlineInputBorder(),
@@ -567,15 +567,15 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
                   InkWell(
                     onTap: _pickWarrantyExpiry,
                     child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: '保修到期（选填）',
+                      decoration: InputDecoration(
+                        labelText: t('add.warrantyExpiry', loc),
                         prefixIcon: Icon(Icons.calendar_today, size: 20),
                         isDense: true,
                       ),
                       child: Text(
                         _warrantyExpiry != null
                             ? '${_warrantyExpiry!.year}-${_padWarranty(_warrantyExpiry!.month)}-${_padWarranty(_warrantyExpiry!.day)}'
-                            : '选择日期',
+                            : t('add.selectDate', loc),
                         style: TextStyle(color: _warrantyExpiry != null ? null : Colors.grey),
                       ),
                     ),
@@ -593,9 +593,9 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
                   TextField(
                     controller: _insuranceController,
                     textAlign: TextAlign.center,
-                    decoration: const InputDecoration(
-                      labelText: '保险信息（选填）',
-                      hintText: '保险公司、保单号等',
+                    decoration: InputDecoration(
+                      labelText: t('add.insuranceInfo', loc),
+                      hintText: t('add.insuranceHint', loc),
                       prefixIcon: Icon(Icons.security, size: 20),
                     ),
                     maxLines: 2,
@@ -683,6 +683,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       final items = await _aiService.recognizeFromScreenshot(
         bytes,
         fileName: picked.name,
+        locale: ref.read(localeCodeProvider),
       ).timeout(const Duration(seconds: 30), onTimeout: () {
         return [{'error': t('add.aiTimeout', ref.read(localeCodeProvider))}];
       });

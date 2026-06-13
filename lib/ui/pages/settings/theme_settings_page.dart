@@ -175,12 +175,12 @@ class ThemeSettingsPage extends ConsumerWidget {
     );
   }
 
-  String _colorName(String zhName, String locale) {
+  String _colorName(String name, String locale) {
     const map = {
-      '靛蓝': 'color.indigo', '天蓝': 'color.blue', '青绿': 'color.teal', '翠绿': 'color.green',
-      '橙色': 'color.orange', '玫红': 'color.pink', '紫色': 'color.purple', '红色': 'color.red',
+      'indigo': 'color.indigo', 'blue': 'color.blue', 'teal': 'color.teal', 'green': 'color.green',
+      'orange': 'color.orange', 'pink': 'color.pink', 'purple': 'color.purple', 'red': 'color.red',
     };
-    return t(map[zhName] ?? 'color.indigo', locale);
+    return t(map[name] ?? 'color.indigo', locale);
   }
 
   void _selectMode(WidgetRef ref, ThemeMode mode) {

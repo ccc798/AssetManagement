@@ -9,7 +9,7 @@ class AssetItem extends Equatable {
     this.id = 0,
     String? uuid,
     this.name = '',
-    this.category = '其他',
+    this.category = '',
     this.brand = '',
     this.price = 0.0,
     this.purchaseDate,
@@ -93,7 +93,7 @@ class AssetItem extends Equatable {
   factory AssetItem.fromJson(Map<String, dynamic> json) => AssetItem(
         id: json['id'] as int? ?? 0, uuid: json['uuid'] as String?,
         name: json['name'] as String? ?? '',
-        category: json['category'] as String? ?? '其他',
+        category: json['category'] as String? ?? '',
         brand: json['brand'] as String? ?? '',
         price: (json['price'] as num?)?.toDouble() ?? 0.0,
         purchaseDate: json['purchaseDate'] != null

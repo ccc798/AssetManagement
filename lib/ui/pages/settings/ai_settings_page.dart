@@ -88,7 +88,7 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
     AppToast.loading(context, t('ai.testLoading', ref.read(localeCodeProvider)));
     await _saveSilent();
 
-    final error = await AiService().testConnection();
+    final error = await AiService().testConnection(locale: ref.read(localeCodeProvider));
     AppToast.dismiss(context);
     setState(() => _isTesting = false);
 
@@ -96,7 +96,7 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
 
     if (error == null) {
       AppToast.bottom(context, '✅ ${t('ai.testSuccess', ref.read(localeCodeProvider))}', Colors.green);
-    } else if (error.contains('400') || error.contains('not support') || error.contains('不支持')) {
+    } else if (error.contains('400') || error.contains('not support') || error.contains('vision')) {
       AppToast.bottom(
         context,
         t('ai.testVisionWarning', ref.read(localeCodeProvider)).replaceAll('{error}', error),

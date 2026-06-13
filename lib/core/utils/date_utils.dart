@@ -10,8 +10,6 @@ class AppDateUtils {
   static final DateFormat _yearFmt = DateFormat('yyyy');
   static final DateFormat _shortFmt = DateFormat('MM/dd');
   static final DateFormat _weekdayFmt = DateFormat('EEEE');
-  static final DateFormat _cnFmt = DateFormat('yyyy年MM月dd日');
-  static final DateFormat _monthDayFmt = DateFormat('MM月dd日');
 
   /// 格式化日期
   static String formatDate(DateTime date) => _dateFmt.format(date);
@@ -25,14 +23,28 @@ class AppDateUtils {
   /// 格式化年份
   static String formatYear(DateTime date) => _yearFmt.format(date);
 
-  /// 中文日期
-  static String formatCn(DateTime date) => _cnFmt.format(date);
+  /// 按 locale 格式化日期（zh → 2025年01月15日，en → 2025-01-15）
+  static String formatLocale(DateTime date, String locale) {
+    if (locale == 'zh') {
+      return '${date.year}年${_pad(date.month)}月${_pad(date.day)}日';
+    }
+    return _dateFmt.format(date);
+  }
 
-  /// 短日期 (MM/dd)
-  static String formatShort(DateTime date) => _shortFmt.format(date);
+  /// 按 locale 格式化月日（zh → 01月15日，en → Jan 15）
+  static String formatLocaleShort(DateTime date, String locale) {
+    if (locale == 'zh') {
+      return '${_pad(date.month)}月${_pad(date.day)}日';
+    }
+    return '${_shortMonths[date.month - 1]} ${date.day}';
+  }
 
-  /// 月日中文
-  static String formatMonthDay(DateTime date) => _monthDayFmt.format(date);
+  static const List<String> _shortMonths = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  static String _pad(int n) => n.toString().padLeft(2, '0');
 
   /// 计算从购买日到现在的天数
   static int daysSince(DateTime purchaseDate) {

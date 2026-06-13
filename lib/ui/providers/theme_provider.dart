@@ -11,14 +11,14 @@ class ColorSchemeOption {
 }
 
 const List<ColorSchemeOption> presetColorSchemes = [
-  ColorSchemeOption(name: '靛蓝', seed: Color(0xFF5C6BC0)),
-  ColorSchemeOption(name: '天蓝', seed: Color(0xFF42A5F5)),
-  ColorSchemeOption(name: '青绿', seed: Color(0xFF26A69A)),
-  ColorSchemeOption(name: '翠绿', seed: Color(0xFF66BB6A)),
-  ColorSchemeOption(name: '橙色', seed: Color(0xFFFF9800)),
-  ColorSchemeOption(name: '玫红', seed: Color(0xFFEC407A)),
-  ColorSchemeOption(name: '紫色', seed: Color(0xFFAB47BC)),
-  ColorSchemeOption(name: '红色', seed: Color(0xFFD32F2F)),
+  ColorSchemeOption(name: 'indigo', seed: Color(0xFF5C6BC0)),
+  ColorSchemeOption(name: 'blue', seed: Color(0xFF42A5F5)),
+  ColorSchemeOption(name: 'teal', seed: Color(0xFF26A69A)),
+  ColorSchemeOption(name: 'green', seed: Color(0xFF66BB6A)),
+  ColorSchemeOption(name: 'orange', seed: Color(0xFFFF9800)),
+  ColorSchemeOption(name: 'pink', seed: Color(0xFFEC407A)),
+  ColorSchemeOption(name: 'purple', seed: Color(0xFFAB47BC)),
+  ColorSchemeOption(name: 'red', seed: Color(0xFFD32F2F)),
 ];
 
 /// ThemeMode 解析

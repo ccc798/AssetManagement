@@ -5,11 +5,11 @@ import '../core/i18n/translations.dart';
 import '../data/database/config_dao.dart';
 import '../data/models/backup_config.dart';
 
-/// AI 鏈嶅姟 鈥?閫氱敤 OpenAI 鍏煎鎺ュ彛
+/// AI Service — OpenAI-compatible interface
 ///
-/// 鏀寔:
-/// 1. 鎴浘璇嗗埆 (瑙嗚) 鈫?鎻愬彇鐗╁搧淇℃伅
-/// 2. 鏁版嵁鏁寸悊 (鏂囨湰) 鈫?缁撴瀯鍖?鍒嗙被/鏍囩寤鸿
+/// Supports:
+/// 1. Screenshot recognition (vision) — extract item info from receipt images
+/// 2. Data enrichment (text) — structured classification / tag suggestions
 class AiService {
   final Dio _dio = Dio();
   final ConfigDao _configDao = ConfigDao();
@@ -79,10 +79,11 @@ class AiService {
   Future<List<Map<String, dynamic>>> recognizeFromScreenshot(
     List<int> imageBytes, {
     String? fileName,
+    String locale = 'zh',
   }) async {
     final config = await _getConfig();
     if (config.aiApiKey.isEmpty) {
-      return [{'error': '璇峰厛鍦ㄨ缃腑閰嶇疆 AI API Key'}];
+      return [{'error': '请先在设置中配置 AI API Key'}];
     }
 
     // 将图片转为 Base64
@@ -91,26 +92,42 @@ class AiService {
     final url = _buildUrl(config.aiBaseUrl, '/chat/completions');
 
     final prompt = '''
-浣犳槸涓€涓喘鐗╄鍗曟埅鍥捐瘑鍒姪鎵嬨€傝璇嗗埆杩欏紶鎴浘涓殑鎵€鏈夌墿鍝佷俊鎭€?
-娉ㄦ剰锛氫竴涓鍗曚腑鍙兘鍖呭惈澶氫欢鐗╁搧锛岃閫愪竴鍒楀嚭姣忎欢鐗╁搧銆?
-浠?JSON 鏁扮粍鏍煎紡杩斿洖锛屾暟缁勪腑鐨勬瘡涓厓绱犱唬琛ㄤ竴浠剁墿鍝侊細
+You are a shopping receipt OCR assistant. Extract all purchased item information from this receipt screenshot.
+
+Return a JSON array of items. Each item must follow this structure:
 
 [
   {
-    "name": "鐗╁搧鍚嶇О锛堝繀椤伙級",
-    "category": "鍒嗙被锛堢數瀛愪骇鍝?鏈嶈闉嬪附/椋熷搧楗枡/瀹跺眳鐢ㄥ搧/鍥句功鏁欒偛/杩愬姩鎴峰/缇庡鎶よ偆/浜ら€氬伐鍏?鍖荤枟鍋ュ悍/绀煎搧鐜╁叿/瀹犵墿鐢ㄥ搧/鍏朵粬锛?,
-    "brand": "鍝佺墝",
-    "price": 瀹為檯鏀粯浠锋牸锛堢函鏁板瓧锛屼笉瑕佽揣甯佺鍙凤級,
-    "quantity": 鏁伴噺锛堥粯璁?锛?
-    "purchaseDate": "璐拱鏃ユ湡锛堟牸寮?YYYY-MM-DD锛?,
-    "tags": ["鏍囩1", "鏍囩2"]
+    "name": "Item name (required)",
+    "category": "electronics/clothing/food/home/books/sports/beauty/transportation/medical/gifts/pets/other",
+    "brand": "Brand name",
+    "price": Actual paid price as number (required, no currency symbol),
+    "quantity": Quantity (default 1),
+    "purchaseDate": "Purchase date in YYYY-MM-DD format",
+    "tags": ["tag1", "tag2"]
   }
 ]
 
-閲嶈 鈥斺€?浠锋牸鎻愬彇瑙勫垯锛?1. 璐墿鎴浘涓婇€氬父鏈夊涓噾棰濓細鍘熶环銆佹姌鎵ｄ环銆佹弧鍑忎环銆佹渶缁堟敮浠樹环绛夈€?2. 璇蜂娇鐢ㄣ€屽疄闄呮敮浠?瀹炰粯/瀹炰粯娆?瀹炰粯閲戦/璁㈠崟鎬讳环/鍚堣/瀹炴敹/鏀粯閲戦/鏈€缁堜环鏍笺€嶅搴旂殑閲戦銆?3. 涓嶈浣跨敤銆屽師浠?鍒掔嚎浠?鍚婄墝浠?寤鸿闆跺敭浠枫€嶃€?4. 涓嶈浣跨敤銆屼紭鎯?绔嬪噺/鐪佷簡/宸蹭紭鎯?鎶樻墸閲戦銆嶏紙杩欎簺鏄渷浜嗗灏戦挶锛屼笉鏄敮浠橀噾棰濓級銆?5. 濡傛灉鐪嬪埌銆屄x 鍒版墜浠?鍒稿悗浠?娲诲姩浠?淇冮攢浠枫€嶏紝浼樺厛浣跨敤杩欎釜閲戦銆?6. 澶氫欢鍟嗗搧鐨勭壒娈婃儏鍐碉紙濡傛窐瀹?浜笢璁㈠崟锛夛細
-   a) 姣忎釜鍟嗗搧鏃佽竟鏄剧ず鐨勬槸璇ュ晢鍝佽嚜宸辩殑浠锋牸锛堝崟鍝佸疄浠樹环锛夛紝搴斿垎鍒彁鍙栦负姣忎釜鐗╁搧鐨?price銆?   b) 椤甸潰搴曢儴鐨勩€屽疄浠樻/瀹炰粯鍚堣/璁㈠崟鎬讳环銆嶆槸鏁寸瑪璁㈠崟鐨勬€婚噾棰濓紝涓嶈鐢ㄦ€婚噾棰濋櫎浠ユ暟閲忋€?   c) 鍗充娇澶氫釜鍟嗗搧锛屻€屼笉瑕佷娇鐢ㄣ€嶇殑瀛楁锛堝師浠风瓑锛変粛鐒跺簲璇ヨ蹇界暐銆?   d) 浼樺厛鎵惧埌姣忎欢鍟嗗搧鑷繁鐨勪环鏍兼爣绛撅紝涓嶄緷璧栨€荤殑銆屽疄浠樻銆嶃€?7. 濡傛灉纭疄鍙湁璁㈠崟鎬讳环娌℃湁鍗曞搧浠凤紝price 濉€屾€讳环/鏁伴噺銆嶇殑浼扮畻鍊硷紝骞跺湪 tags 涓坊鍔犮€屼及绠椼€嶃€?
-鍏朵粬瑕佹眰锛?- 濡傛灉鍙湁涓€浠剁墿鍝侊紝涔熻繑鍥炲寘鍚竴涓厓绱犵殑鏁扮粍
-- 濡傛灉鏈夊涓墿鍝侊紙濡備竴绗旇鍗曚拱浜嗘墜鏈哄拰鑰虫満锛夛紝姣忎欢鐗╁搧浣滀负涓€涓嫭绔嬪厓绱?- 鍚屼竴浠剁墿鍝佷拱澶氫釜锛堝3浠禩鎭わ級锛宷uantity 濉?锛宲rice 濉崟涓环鏍?- 鍙繑鍥?JSON 鏁扮粍锛屼笉瑕侀澶栬鏄庛€備笉纭畾鐨勫瓧娈靛啓绌哄瓧绗︿覆鎴?null銆?''';
+Important price extraction rules:
+1. Receipts often show multiple amounts: original price, discount, final payment, etc.
+2. Use the actual payment amount (final price, total, amount paid, checkout total)
+3. Do NOT use original price, crossed-out price, list price, or suggested retail price
+4. Do NOT use discount/saved amounts (these are savings, not payment)
+5. If you see "x到手价/券后价/活动价/促销价", use that amount
+6. For multi-item orders (e.g., Taobao/JD):
+   a) Each item's displayed price next to it is its individual price
+   b) The bottom "total/order total" is the sum for the whole order
+   c) Extract each item's own price label independently
+   d) Prefer individual item prices over the order total
+7. If only the order total is visible with no individual prices, estimate as "total/quantity" and add tag "estimated"
+
+Additional rules:
+- If only one item, still return an array containing one element
+- If multiple items (e.g., phone + earphones), each is a separate element
+- If multiple identical items (e.g., 3x T-shirts), set quantity to 3 and price to unit price
+- Return ONLY the JSON array, no additional explanation
+- Leave uncertain fields as empty string or null
+''';
 
     try {
       final response = await _retryPost(
@@ -167,17 +184,17 @@ class AiService {
       }
 
       return [{
-        'error': '无法解析 AI 返回结果',
+        'error': t('ai.testFailed', locale),
         'rawContent': content,
       }];
     } on DioException catch (e) {
       return [{
-        'error': 'AI 请求失败: ${e.message}',
+        'error': '${t('ai.testFailed', locale)}: ${e.message}',
         'rawContent': e.response?.toString() ?? '',
       }];
     } catch (e) {
       return [{
-        'error': '未知错误: $e',
+        'error': '${t('ai.testFailed', locale)}: $e',
       }];
     }
   }
@@ -197,17 +214,20 @@ class AiService {
     final url = _buildUrl(config.aiBaseUrl, '/chat/completions');
 
     final prompt = '''
-浣犳槸涓€涓釜浜鸿祫浜х鐞嗗姪鎵嬨€傜敤鎴锋彁渚涗簡涓€涓墿鍝佺殑鍘熷淇℃伅锛岃琛ュ厖鍜屽畬鍠勫畠銆?
-鍘熷淇℃伅:
+You are a personal asset management assistant. The user provided raw item information, please enrich and improve it.
+
+Raw information:
 ${jsonEncode(itemInfo)}
 
-璇疯繑鍥炶ˉ鍏呭悗鐨?JSON锛屽寘鍚互涓嬪瓧娈碉細
-- name: 鐗╁搧鍚嶇О锛堣鑼冨懡鍚嶏級
-- category: 鏈€鍚堥€傜殑鍒嗙被
-- brand: 鍝佺墝
-- tags: 寤鸿鐨勬爣绛炬暟缁勶紙3-5涓級
-- suggestions: 浣跨敤寤鸿/淇濆吇寤鸿锛堜竴鍙ヨ瘽锛?
-鍙繑鍥?JSON锛屼笉瑕侀澶栬鏄庛€?''';
+Return the enriched JSON with the following fields:
+- name: Standardized item name
+- category: Best matching category
+- brand: Brand name
+- tags: Suggested tags array (3-5 items)
+- suggestions: Usage/care suggestions (one sentence)
+
+Return ONLY the JSON, no additional explanation.
+''';
 
     try {
       final response = await _dio.post(
@@ -222,7 +242,7 @@ ${jsonEncode(itemInfo)}
             },
             {
               'role': 'user',
-              'content': '请帮我完善这条物品信息',
+              'content': 'Please help me enrich this item info',
             },
           ],
           'max_tokens': config.aiMaxTokens,
@@ -300,7 +320,7 @@ ${jsonEncode(itemInfo)}
       final url = _buildUrl(config.aiBaseUrl, '/chat/completions');
       final headers = await _headers();
 
-      // ---------- 绗竴姝ワ細鍩虹杩炴帴娴嬭瘯 ----------
+      // ---------- Step 1: Basic connection test ----------
       final baseResp = await _retryPost(
         url,
         options: Options(headers: headers),
@@ -314,14 +334,14 @@ ${jsonEncode(itemInfo)}
       );
 
       if (baseResp.statusCode != 200) {
-        if (baseResp.statusCode == 401) return 'API Key 无效（401）';
-        if (baseResp.statusCode == 404) return '接口地址不存在（404），请检查 API 地址';
-        if (baseResp.statusCode == 429) return '请求过于频繁（429），请稍后重试';
-        if (baseResp.statusCode == 500) return '服务器内部错误（500）';
+        if (baseResp.statusCode == 401) return t('ai.errInvalidKey', locale);
+        if (baseResp.statusCode == 404) return t('ai.errNotFound', locale);
+        if (baseResp.statusCode == 429) return t('ai.errTooMany', locale);
+        if (baseResp.statusCode == 500) return t('ai.errServerError', locale);
         return 'HTTP ${baseResp.statusCode}';
       }
 
-      // ---------- 绗簩姝ワ細澶氭ā鎬佸浘鐗囪瘑鍒祴璇?----------
+      // ---------- Step 2: Multimodal image recognition test ----------
       // 使用 20x20 像素的蓝色实心 PNG 测试多模态能力
       // 注意：1x1 像素图片会被部分模型拒绝（尺寸过小），因此使用 20x20
       final testPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAnSURBVDhPY5Cb8P8/NTEDugCleNRAyvGogZTjUQMpx6MGUo4Hv4EA/cEs/Z9QHFEAAAAASUVORK5CYII=';
@@ -336,7 +356,7 @@ ${jsonEncode(itemInfo)}
               {
                 'role': 'user',
                 'content': [
-                  {'type': 'text', 'text': '鎻忚堪杩欏紶鍥剧墖'},
+                  {'type': 'text', 'text': 'Describe this image'},
                   {
                     'type': 'image_url',
                     'image_url': {
@@ -355,36 +375,36 @@ ${jsonEncode(itemInfo)}
           return null; // ✓ 模型支持多模态
         }
         if (visionResp.statusCode == 400) {
-          return '模型不支持图片识别（400），但仍可使用文字描述手动添加物品';
+          return t('ai.errNoVision', locale);
         }
-        return '图片识别测试未通过（HTTP ${visionResp.statusCode}），但基础连接正常';
+        return t('ai.errVisionFailed', locale).replaceAll('{code}', '${visionResp.statusCode}');
       } on DioException catch (e) {
         if (e.type == DioExceptionType.badResponse &&
             e.response?.statusCode == 400) {
-          return '模型不支持图片识别（400），但仍可使用文字描述手动添加物品';
+          return t('ai.errNoVision', locale);
         }
-        return '图片识别测试异常，但基础连接正常（实际截图识别可能可用）';
+        return t('ai.errVisionAbnormal', locale);
       }
     } on DioException catch (e) {
-      if (e.type == DioExceptionType.connectionTimeout) return '连接超时，请检查网络';
-      if (e.type == DioExceptionType.receiveTimeout) return '响应超时';
+      if (e.type == DioExceptionType.connectionTimeout) return t('ai.errTimeout', locale);
+      if (e.type == DioExceptionType.receiveTimeout) return t('ai.errReceiveTimeout', locale);
       if (e.type == DioExceptionType.connectionError) {
         if (e.message != null && e.message!.contains('Connection refused')) {
-          return '连接被服务器拒绝。常见原因：1）运营商/网络防火墙拦截了该服务器 2）需通过代理/VPN访问 3）API地址或端口有误。建议切换WiFi/移动数据后重试';
+          return t('ai.errConnectionRefused', locale);
         }
-        return '无法连接服务器（${e.message}）';
+        return t('ai.errCantConnect', locale).replaceAll('{msg}', '${e.message}');
       }
       if (e.type == DioExceptionType.badResponse) {
         final code = e.response?.statusCode;
-        if (code == 400) return '请求格式错误（400），模型可能不支持图片识别';
-        if (code == 401) return 'API Key 无效（401）';
-        if (code == 404) return '接口地址不存在（404），请检查 API 地址';
-        if (code == 429) return '请求过于频繁（429）';
-        return '服务器错误 $code';
+        if (code == 400) return t('ai.errBadRequest', locale);
+        if (code == 401) return t('ai.errInvalidKey', locale);
+        if (code == 404) return t('ai.errNotFound', locale);
+        if (code == 429) return t('ai.errTooMany', locale);
+        return t('ai.errServerError2', locale).replaceAll('{code}', '$code');
       }
-      return '璇锋眰澶辫触: ${e.message}';
+      return '${t('ai.testFailed', locale)}: ${e.message}';
     } catch (e) {
-      return '鏈煡閿欒: $e';
+      return '${t('ai.testFailed', locale)}: $e';
     }
   }
 }

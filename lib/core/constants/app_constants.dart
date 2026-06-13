@@ -7,7 +7,7 @@ class AppConstants {
 
   /// 版本号（由 build_all.ps1 自动更新）
   static const String appVersion = '0.0.1';
-  static const String buildNumber = '26061308';
+  static const String buildNumber = '26061309';
   static const String appVersionFull = '$appVersion+$buildNumber';
 
   /// 数据库
@@ -85,6 +85,7 @@ class AppConstants {
     return 'other';
   }
 }
+
 
 
 

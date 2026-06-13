@@ -5,24 +5,26 @@ import 'package:path_provider/path_provider.dart';
 import 'package:xml/xml.dart';
 import '../data/database/config_dao.dart';
 import '../data/models/backup_config.dart';
+import '../core/i18n/translations.dart';
 
-/// WebDAV 澶囦唤鏈嶅姟
+/// WebDAV backup service
 class WebDavService {
   final ConfigDao _configDao = ConfigDao();
 
   WebDavService();
 
-  /// 鏋勫缓甯?Basic 璁よ瘉鐨?Dio 瀹炰緥
+  /// Build a Dio instance with Basic auth
   Future<Dio> _authDio() async {
     final config = await _configDao.getConfig();
 
-    // 鏍囧噯鍖?base URL 鈥?鐩綍 URL 蹇呴』浠?/ 缁撳熬
+    // Normalize base URL — directory URL must end with /
     var baseUrl = config.webdavUrl.trim();
-    // 淇甯歌绗旇锛氶€楀彿鈫掔偣鍙枫€佸叏瑙掔偣鈫掔偣鍙?    baseUrl = baseUrl.replaceAll(',', '.').replaceAll('，', '.');
+    // Fix common typos: comma → dot, fullwidth dot → dot
+    baseUrl = baseUrl.replaceAll(',', '.').replaceAll('，', '.');
     if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
       baseUrl = 'https://$baseUrl';
     }
-    // 鑷姩淇甯歌鐨?www.jianguoyun.com 鈫?dav.jianguoyun.com
+    // Auto-fix common www.jianguoyun.com → dav.jianguoyun.com
     baseUrl = baseUrl.replaceFirstMapped(
       RegExp(r'^https?://www\.jianguoyun\.com', caseSensitive: false),
       (m) => '${m.input.substring(0, m.start)}https://dav.jianguoyun.com',
@@ -68,18 +70,17 @@ class WebDavService {
     return config.webdavUrl.isNotEmpty;
   }
 
-  /// 娴嬭瘯 WebDAV 杩炴帴
+  /// Test WebDAV connection
   ///
-  /// 杩斿洖 null = 鎴愬姛锛岄潪 null = 閿欒淇℃伅
-  Future<String?> testConnection() async {
+  /// Returns null = success, non-null = error message
+  Future<String?> testConnection({String locale = 'zh'}) async {
     try {
       final config = await _configDao.getConfig();
-      if (config.webdavUrl.isEmpty) return 'WebDAV 地址未填写';
+      if (config.webdavUrl.isEmpty) return '${t('error.loadFailed', locale)}: WebDAV URL not set';
 
       final dio = await _authDio();
-      // baseUrl 宸插寘鍚畬鏁寸洰褰曡矾寰勶紝璇锋眰鐢?'' 鍗冲彲
 
-      // ---------- 1. 鍏堣瘯 PROPFIND ----------
+      // ---------- 1. Try PROPFIND ----------
       try {
         final body = '''<?xml version="1.0" encoding="utf-8"?>
 <propfind xmlns="DAV:">
@@ -108,17 +109,17 @@ class WebDavService {
           return null; // ✓ 成功
         }
 
-        // 501 → 不支持 PROPFIND，降级到 OPTIONS
+        // 501 → PROPFIND not supported, fallback to OPTIONS
         if (resp.statusCode != 501) {
-          if (resp.statusCode == 401) return '认证失败（请检查用户名和密码）';
-          if (resp.statusCode == 404) return '地址不存在（请检查 WebDAV URL）';
-          return 'PROPFIND 杩斿洖: ${resp.statusCode}';
+          if (resp.statusCode == 401) return t('webdav.errAuth', locale);
+          if (resp.statusCode == 404) return t('webdav.errNotFound', locale);
+          return t('webdav.errPropfind', locale).replaceAll('{code}', '${resp.statusCode}');
         }
       } on DioException catch (_) {
-        // PROPFIND 异常 → 继续试 OPTIONS
+        // PROPFIND exception → try OPTIONS
       }
 
-      // ---------- 2. 澶囬€夛細OPTIONS ----------
+      // ---------- 2. Fallback: OPTIONS ----------
       try {
         final resp = await dio.request('', options: Options(method: 'OPTIONS'));
 
@@ -126,28 +127,28 @@ class WebDavService {
           final dav = resp.headers.value('DAV') ?? '';
           final allow = resp.headers.value('Allow') ?? '';
           if (dav.isNotEmpty || allow.contains('PROPFIND') || allow.contains('PUT')) {
-            return null; // ✓ 服务器支持 WebDAV
+            return null; // ✓ Server supports WebDAV
           }
-          return '服务器可连，但未检测到 WebDAV 支持';
+          return t('webdav.errNoWebdav', locale);
         }
-        if (resp.statusCode == 401) return '认证失败';
-        if (resp.statusCode == 404) return '地址不存在';
-        return 'OPTIONS 杩斿洖: ${resp.statusCode}';
+        if (resp.statusCode == 401) return t('webdav.errAuth', locale);
+        if (resp.statusCode == 404) return t('webdav.errNotFound', locale);
+        return t('webdav.errOptions', locale).replaceAll('{code}', '${resp.statusCode}');
       } on DioException catch (e) {
-        if (e.type == DioExceptionType.connectionTimeout) return '连接超时';
-        if (e.type == DioExceptionType.connectionError) return '无法连接服务器（${e.message}）';
-        return '璇锋眰澶辫触: ${e.message}';
+        if (e.type == DioExceptionType.connectionTimeout) return t('webdav.errTimeout', locale);
+        if (e.type == DioExceptionType.connectionError) return t('webdav.errCantConnect', locale).replaceAll('{msg}', '${e.message}');
+        return t('webdav.errRequest', locale).replaceAll('{msg}', '${e.message}');
       }
     } on DioException catch (e) {
-      if (e.type == DioExceptionType.connectionTimeout) return '连接超时';
-      if (e.type == DioExceptionType.connectionError) return '无法连接服务器（${e.message}）';
-      return '璇锋眰澶辫触: ${e.message}';
+      if (e.type == DioExceptionType.connectionTimeout) return t('webdav.errTimeout', locale);
+      if (e.type == DioExceptionType.connectionError) return t('webdav.errCantConnect', locale).replaceAll('{msg}', '${e.message}');
+      return t('webdav.errRequest', locale).replaceAll('{msg}', '${e.message}');
     } catch (e) {
-      return '鏈煡閿欒: $e';
+      return t('webdav.errUnknown', locale).replaceAll('{msg}', '$e');
     }
   }
 
-  /// 确保远程目录存在（创建如果不存在）
+  /// Ensure remote directory exists (create if missing)
   Future<bool> ensureDirectory() async {
     try {
       final config = await _configDao.getConfig();
@@ -165,11 +166,11 @@ class WebDavService {
     }
   }
 
-  /// 上传备份到 WebDAV
+  /// Upload backup to WebDAV
   Future<Map<String, dynamic>> uploadBackup({String? customFileName}) async {
     try {
       final config = await _configDao.getConfig();
-      if (config.webdavUrl.isEmpty) return {'success': false, 'error': 'WebDAV 未配置'};
+      if (config.webdavUrl.isEmpty) return {'success': false, 'error': 'WebDAV not configured'};
 
       await ensureDirectory();
 
@@ -177,10 +178,10 @@ class WebDavService {
       final dir = await getApplicationDocumentsDirectory();
       var dataPath = '${dir.path}/asset_management_data.json';
       if (!File(dataPath).existsSync()) {
-        // 鍏煎鏃х増鏈枃浠跺悕
+        // Compat: old filename
         final old = '${dir.path}/asset_keeper_data.json';
         if (File(old).existsSync()) dataPath = old;
-        else return {'success': false, 'error': '本地数据文件不存在'};
+        else return {'success': false, 'error': 'Local data file not found'};
       }
 
       final fileName = customFileName ?? 'asset_management_backup_${_formatTimestamp(DateTime.now())}.json';
@@ -201,17 +202,17 @@ class WebDavService {
         await _configDao.updateLastBackupTime(DateTime.now());
         return {'success': true, 'fileName': fileName, 'fileSize': File(dataPath).lengthSync(), 'uploadTime': DateTime.now().toIso8601String()};
       }
-      return {'success': false, 'error': '上传失败，服务器返回 ${resp.statusCode}'};
+      return {'success': false, 'error': 'Upload failed, server returned ${resp.statusCode}'};
     } catch (e) {
-      return {'success': false, 'error': '澶囦唤涓婁紶澶辫触: $e'};
+      return {'success': false, 'error': 'Backup upload failed: $e'};
     }
   }
 
-  /// 下载备份
+  /// Download backup from WebDAV
   Future<Map<String, dynamic>> downloadBackup(String fileName) async {
     try {
       final config = await _configDao.getConfig();
-      if (config.webdavUrl.isEmpty) return {'success': false, 'error': 'WebDAV 未配置'};
+      if (config.webdavUrl.isEmpty) return {'success': false, 'error': 'WebDAV not configured'};
 
       final remotePath = _fileUrl(fileName, path: config.webdavPath);
       final dio = await _authDio();
@@ -224,15 +225,15 @@ class WebDavService {
         await File(localPath).writeAsBytes(resp.data as List<int>);
         return {'success': true, 'localPath': localPath, 'fileSize': (resp.data as List<int>).length};
       }
-      return {'success': false, 'error': '下载失败: ${resp.statusCode}'};
+      return {'success': false, 'error': 'Download failed: ${resp.statusCode}'};
     } catch (e) {
-      return {'success': false, 'error': '澶囦唤涓嬭浇澶辫触: $e'};
+      return {'success': false, 'error': 'Backup download failed: $e'};
     }
   }
 
-  /// 列出远程备份文件
+  /// List remote backup files
   ///
-  /// 异常直接向上抛，由 UI 层显示错误信息
+  /// Throws on error; UI layer handles display
   Future<List<Map<String, dynamic>>> listBackups() async {
     final config = await _configDao.getConfig();
     if (config.webdavUrl.isEmpty) throw Exception('WebDAV 地址为空，请先保存配置');
@@ -269,7 +270,7 @@ class WebDavService {
     );
 
     if (resp.statusCode != 207) {
-      throw Exception('PROPFIND 杩斿洖 HTTP ${resp.statusCode}锛岃姹傚湴鍧€: $fullUrl');
+      throw Exception('PROPFIND returned HTTP ${resp.statusCode}, URL: $fullUrl');
     }
 
     final rawXml = resp.data.toString();
@@ -298,9 +299,9 @@ class WebDavService {
     int skippedProps = 0;
 
     for (final r in allResponses) {
-      final href = r.findElements('${dav}href').firstOrNull?.innerText ?? '(鏃爃ref)';
+      final href = r.findElements('${dav}href').firstOrNull?.innerText ?? '(no href)';
 
-      // 璺宠繃鐩綍
+      // Skip directories
       final resType = firstProp(r)
           ?.findElements('${dav}resourcetype').firstOrNull;
       if (resType != null && resType.findElements('${dav}collection').isNotEmpty) {
@@ -329,7 +330,7 @@ class WebDavService {
     return files;
   }
 
-  /// 鍒犻櫎杩滅▼澶囦唤
+  /// Delete remote backup
   Future<bool> deleteBackup(String fileName) async {
     try {
       final config = await _configDao.getConfig();
@@ -342,7 +343,7 @@ class WebDavService {
     }
   }
 
-  /// 鏍煎紡鍖栨椂闂存埑鐢ㄤ簬鏂囦欢鍚嶏細2026-06-11_14-30-00
+  /// Format timestamp for filenames: 2026-06-11_14-30-00
   String _formatTimestamp(DateTime dt) {
     final pad = (int n) => n.toString().padLeft(2, '0');
     return '${dt.year}-${pad(dt.month)}-${pad(dt.day)}_${pad(dt.hour)}-${pad(dt.minute)}-${pad(dt.second)}';

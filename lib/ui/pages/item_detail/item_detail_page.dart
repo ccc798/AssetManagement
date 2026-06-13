@@ -108,7 +108,7 @@ class ItemDetailPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${t('detail.purchased', loc).replaceAll('{date}', AppDateUtils.formatCn(item.purchaseDate ?? DateTime.now()))}',
+                    '${t('detail.purchased', loc).replaceAll('{date}', AppDateUtils.formatLocale(item.purchaseDate ?? DateTime.now(), loc))}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -183,7 +183,7 @@ class ItemDetailPage extends ConsumerWidget {
               _detailRow(t('detail.brand', loc), item.brand, Icons.business),
             _detailRow(
               t('detail.purchaseDate', loc),
-              AppDateUtils.formatCn(item.purchaseDate ?? DateTime.now()),
+              AppDateUtils.formatLocale(item.purchaseDate ?? DateTime.now(), loc),
               Icons.calendar_today,
             ),
             _detailRow(
@@ -290,7 +290,7 @@ class ItemDetailPage extends ConsumerWidget {
               const Divider(),
               _buildCostRow(
                 t('detail.estimatedEnd', loc),
-                AppDateUtils.formatCn(endDate),
+                AppDateUtils.formatLocale(endDate, loc),
                 Icons.event,
                 Colors.red.shade300,
               ),
