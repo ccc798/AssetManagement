@@ -1,0 +1,99 @@
+# ── 操作系统文件 ──
+.DS_Store
+.DS_Store?
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ── IDE / 编辑器 ──
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.idea_modules/
+*.vcs/
+*.swp
+
+# ── Flutter / Dart ──
+.dart_tool/
+.pub/
+.pub-cache/
+.packages
+.pub-preload-cache/
+build/
+*.js_.map
+*.js_.map.d.ts
+**/doc/api/
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+.cm/
+flutter_*.png
+android/local.properties
+android/key.properties
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/app.zip
+ios/Flutter/flutter_assets/
+ios/Flutter/flutter_export_environment.sh
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+android/.gradle/
+.gradle/
+**/GeneratedPluginRegistrant.java
+
+# ── 测试文件（不上传） ──
+test/
+coverage/
+
+# ── Android 构建产物 ──
+*.apk
+*.aab
+*.dex
+*.class
+*.log
+*.sig
+*.ap_
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/.build/
+local.properties
+
+# ── iOS 构建产物 ──
+*.ipa
+*.dSYM.zip
+*.dSYM
+ios/Runner/AppDelegate.o
+ios/Runner/Runner.o
+
+# ── 符号 / 混淆 ──
+app.*.symbols
+app.*.map.json
+
+# ── 日志 / 缓存 / 临时文件 ──
+*.log
+*.pyc
+.history
+.buildlog/
+migrate_working_dir/
+
+# ── 项目根目录 APK（避免将可执行文件推送到仓库） ──
+/AssetManagement*.apk
+
+# ── 本地配置文件（含用户私密信息） ──
+*.local.yaml
+.env
+deploy_github.ps1
