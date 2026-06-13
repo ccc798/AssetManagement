@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
@@ -291,7 +291,7 @@ class WebDavService {
     final totalResponses = allResponses.length;
 
     if (totalResponses == 0) {
-      throw Exception('XML 涓病鏈夋壘鍒颁换浣?<d:response> 鍏冪礌');
+      throw Exception('XML 中没有找到任何<d:response> 元素');
     }
 
     final files = <Map<String, dynamic>>[];

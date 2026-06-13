@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../data/models/asset_item.dart';
@@ -101,7 +101,7 @@ class LocalBackupService {
       throw Exception('文件内容为空，不是有效的备份文件');
     }
 
-    // 4. 瑙ｆ瀽 JSON
+    // 4. 解析 JSON
     List<dynamic> jsonList;
     try {
       final parsed = jsonDecode(content);
