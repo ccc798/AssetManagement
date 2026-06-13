@@ -10,10 +10,10 @@
 > 个人资产管理系统 — 记录、追踪、分析每一笔资产的价值与成本
 > Personal asset management system — track, analyze, and manage every item you own.
 
-!\[Flutter]\(https\://img.shields.io/badge/Flutter-3.22+-blue null)
-!\[Platform]\(https\://img.shields.io/badge/Platform-Android%20|%20Windows%20|%20Linux%20|%20macOS%20|%20iOS-brightgreen null)
-!\[License]\(https\://img.shields.io/badge/License-GPLv3-blue null)
-!\[i18n]\(https\://img.shields.io/badge/i18n-zh%20|%20en-orange null)
+!\[Flutter]\(https\://img.shields.io/badge/Flutter-3.22+-blue)
+!\[Platform]\(https\://img.shields.io/badge/Platform-Android%20|%20Windows%20|%20Linux%20|%20macOS%20|%20iOS-brightgreen)
+!\[License]\(https\://img.shields.io/badge/License-GPLv3-blue)
+!\[i18n]\(https\://img.shields.io/badge/i18n-zh%20|%20en-orange)
 
 ***
 
