@@ -5,8 +5,8 @@
 
 使用工具增加了trae，主要是reasonix不能很直观的看到代码本身，虽然也并不能看懂就是了。
 
-> 个人资产管理系统 — 记录、追踪、分析每一笔资产的价值与成本
-> Personal asset management system — track, analyze, and manage every item you own.
+> 个人资产管理系统
+> Personal asset management system
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.22+-blue)
 ![Platform](https://img.shields.io/badge/Platform-Android%20|%20Windows%20|%20Linux%20|%20macOS%20|%20iOS-brightgreen)
