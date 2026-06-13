@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../core/constants/app_colors.dart';
@@ -123,7 +123,10 @@ class AssetCard extends ConsumerWidget {
                             const SizedBox(width: 8),
                           ],
                           Text(
-                            item.category,
+                            t(
+                              AppConstants.getCategoryNameKey(item.category),
+                              ref.read(localeCodeProvider),
+                            ),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: _getCategoryColor(item.category),
                             ),

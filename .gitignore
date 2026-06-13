@@ -15,12 +15,16 @@ Thumbs.db
 *.ipr
 *.iws
 .vscode/
-.idea/
 *.sublime-project
 *.sublime-workspace
 .idea_modules/
 *.vcs/
-*.swp
+reasonix.toml
+
+# ── Trae IDE ──
+.trae/
+.codegraph/
+.reasonix/
 
 # ── Flutter / Dart ──
 .dart_tool/
@@ -54,7 +58,7 @@ android/.gradle/
 .gradle/
 **/GeneratedPluginRegistrant.java
 
-# ── 测试文件（不上传） ──
+# ── 测试文件 ──
 test/
 coverage/
 
@@ -90,10 +94,23 @@ app.*.map.json
 .buildlog/
 migrate_working_dir/
 
-# ── 项目根目录 APK（避免将可执行文件推送到仓库） ──
+# ── 项目根目录 APK ──
 /AssetManagement*.apk
+/AssetManagement*.zip
+/AssetManagement*.tar.gz
 
 # ── 本地配置文件（含用户私密信息） ──
 *.local.yaml
 .env
 deploy_github.ps1
+TEST_PLAN.md
+.git_branch.txt
+
+# ── 个人数据文件 ──
+asset_management_data.json
+
+# ── 工具脚本 ──
+tools/
+
+# ── 文档规格（按需忽略） ──
+ docs/specs/

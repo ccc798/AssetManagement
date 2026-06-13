@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
+import 'core/services/app_info_service.dart';
 import 'data/database/database_manager.dart';
 import 'services/backup_scheduler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 设置状态栏
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -16,10 +16,10 @@ void main() async {
     ),
   );
 
-  // 初始化数据库
+  await AppInfoService.init();
+
   await DatabaseManager.instance.init();
 
-  // 启动自动备份调度（启动时检查一次）
   BackupScheduler.instance.start();
 
   runApp(

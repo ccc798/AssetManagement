@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/translations.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -180,7 +180,7 @@ class StatisticsPage extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Row(
                   children: [
-                    SizedBox(width: 80, child: Text(entry.key, style: const TextStyle(fontSize: 13))),
+                    SizedBox(width: 80, child: Text(t(AppConstants.getCategoryNameKey(entry.key), loc2), style: const TextStyle(fontSize: 13))),
                     const SizedBox(width: 8),
                     Expanded(
                       child: ClipRRect(

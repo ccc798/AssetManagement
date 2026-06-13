@@ -1,7 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/translations.dart';
-import '../../../core/constants/app_constants.dart';
+import '../../../core/services/app_info_service.dart';
 import 'ai_settings_page.dart';
 import 'backup_settings_page.dart';
 import 'category_management_page.dart';
@@ -9,7 +9,6 @@ import 'export_page.dart';
 import 'language_settings_page.dart';
 import 'theme_settings_page.dart';
 
-/// 设置主页面 — 入口列表，具体设置分别在子页面
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
@@ -23,7 +22,6 @@ class SettingsPage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // AI 智能识别
           Card(
             child: ListTile(
               leading: Container(
@@ -45,7 +43,6 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
 
-          // 导出数据
           Card(
             child: ListTile(
               leading: Container(
@@ -67,7 +64,6 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
 
-          // 分类管理
           Card(
             child: ListTile(
               leading: Container(
@@ -89,7 +85,6 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
 
-          // 主题设置
           Card(
             child: ListTile(
               leading: Container(
@@ -111,7 +106,6 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
 
-          // 语言
           Card(
             child: ListTile(
               leading: Container(
@@ -133,7 +127,6 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
 
-          // 备份与恢复
           Card(
             child: ListTile(
               leading: Container(
@@ -155,7 +148,6 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // 关于
           _buildSectionHeader(theme, t('settings.about', loc2), Icons.info),
           const SizedBox(height: 8),
           Card(
@@ -164,7 +156,7 @@ class SettingsPage extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.info_outline),
                   title: const Text('Asset Management'),
-                  subtitle: Text(t('settings.version', loc2).replaceAll('{ver}', AppConstants.appVersionFull)),
+                  subtitle: Text(AppInfoService.version),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 ),
                 ListTile(

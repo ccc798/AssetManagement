@@ -176,7 +176,7 @@ class ItemDetailPage extends ConsumerWidget {
               ),
             ),
             const Divider(),
-            _detailRow(t('detail.category', loc), item.category, AppIcons.getIcon(
+            _detailRow(t('detail.category', loc), t(AppConstants.getCategoryNameKey(item.category), loc), AppIcons.getIcon(
                 _getCategoryIcon(item.category),
               )),
             if (item.brand.isNotEmpty)

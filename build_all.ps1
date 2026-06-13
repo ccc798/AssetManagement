@@ -1,5 +1,5 @@
 # Asset Management Multi-Platform Build Script
-# Auto versioning: each build increments version.txt +1
+# Version management: reads from pubspec.yaml, auto-increments on build
 # Interactive target selection
 
 param(
@@ -10,10 +10,7 @@ $ErrorActionPreference = "Stop"
 $projectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectDir
 
-$versionFile = "$projectDir/version.txt"
 $pubspecFile = "$projectDir/pubspec.yaml"
-$constantsFile = "$projectDir/lib/core/constants/app_constants.dart"
-$buildNum = (Get-Date -Format "yyMMddHH")
 
 # -- Platform detection --
 $isWindows = $PSVersionTable.PSVersion.Major -ge 5 -and [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
@@ -152,51 +149,38 @@ function Normalize-Choice {
         "all" = "all"
     }
     if ($map.ContainsKey($lower)) { return $map[$lower] }
-    return $null  # invalid
+    return $null
 }
 
-# -- Version management --
-function Update-Version {
-    $version = (Get-Content $versionFile -ErrorAction SilentlyContinue).Trim()
-    if (-not $version) { $version = "0.0.1" }
-
-    # Use Write-Host for info (not Write-Output) so return is clean
-    Write-Host "=========================================="
-    Write-Host "  AssetManagement Build v$version"
-    Write-Host "  Platform: $platformName"
-    Write-Host "=========================================="
-
+# -- Version management (read from pubspec.yaml) --
+function Get-CurrentVersion {
     $pubspec = Get-Content $pubspecFile -Raw
-    $pubspec = $pubspec -replace '(?m)^version: .+$', "version: $version+$buildNum"
-    Set-Content -Path $pubspecFile -Value $pubspec -Encoding UTF8
-    Write-Host "[OK] pubspec.yaml -> $version+$buildNum"
-
-    $constants = Get-Content $constantsFile -Raw
-    $constants = $constants -replace '(?m)static const String appVersion = ''.*'';', "static const String appVersion = '$version';"
-    $constants = $constants -replace '(?m)static const String buildNumber = ''.*'';', "static const String buildNumber = '$buildNum';"
-    Set-Content -Path $constantsFile -Value $constants -Encoding UTF8
-    Write-Host "[OK] app_constants.dart -> $version"
-
-    return $version
+    if ($pubspec -match 'version:\s*([0-9]+\.[0-9]+\.[0-9]+)') {
+        return $matches[1]
+    }
+    return "0.0.1"
 }
 
-function Bump-Version {
-    param([string]$version)
-    $verParts = $version -split '\.'
+# -- Bump version in pubspec.yaml (patch +1) --
+function Bump-Patch {
+    param([string]$currentVersion)
+    $verParts = $currentVersion -split '\.'
     $patch = [int]$verParts[2] + 1
-    $newVersion = "$($verParts[0]).$($verParts[1]).$patch"
-    Set-Content -Path $versionFile -Value $newVersion -Encoding UTF8
-    Write-Output ""
-    Write-Output "=========================================="
-    Write-Output "  Done! v$version -> v$newVersion (next)"
-    Write-Output "=========================================="
+    return "$($verParts[0]).$($verParts[1]).$patch"
+}
+
+# -- Update pubspec.yaml version --
+function Update-Pubspec {
+    param([string]$version)
+    $pubspec = Get-Content $pubspecFile -Raw
+    $pubspec = $pubspec -replace '(?m)^version: .+$', "version: $version"
+    Set-Content -Path $pubspecFile -Value $pubspec -Encoding UTF8
 }
 
 # -- Main --
 function Main {
     $choice = $Target
     if (-not $choice) {
-        # Interactive mode: loop until valid input
         while ($true) {
             $raw = Show-Menu $platformName
             $choice = Normalize-Choice $raw
@@ -205,7 +189,6 @@ function Main {
             Start-Sleep -Seconds 2
         }
     } else {
-        # CLI mode: normalize, fail if invalid
         $choice = Normalize-Choice $choice
         if (-not $choice) {
             Write-Error "Unknown target: $Target"
@@ -214,24 +197,29 @@ function Main {
         }
     }
 
-    $version = Update-Version
+    $currentVersion = Get-CurrentVersion
+
+    Write-Host "=========================================="
+    Write-Host "  AssetManagement Build v$currentVersion"
+    Write-Host "  Platform: $platformName"
+    Write-Host "=========================================="
 
     try {
         switch ($choice) {
             "1" {
                 Build-Android
-                Package-Android $version
+                Package-Android $currentVersion
             }
             "2" {
-                if ($isWindows) { Build-Windows; Package-Windows $version }
-                elseif ($isLinux) { Build-Linux; Package-Linux $version }
-                elseif ($isMacOS) { Build-MacOS; Package-MacOS $version }
+                if ($isWindows) { Build-Windows; Package-Windows $currentVersion }
+                elseif ($isLinux) { Build-Linux; Package-Linux $currentVersion }
+                elseif ($isMacOS) { Build-MacOS; Package-MacOS $currentVersion }
             }
             "3" {
-                Build-Android; Package-Android $version
-                if ($isWindows) { Build-Windows; Package-Windows $version }
-                elseif ($isLinux) { Build-Linux; Package-Linux $version }
-                elseif ($isMacOS) { Build-MacOS; Package-MacOS $version }
+                Build-Android; Package-Android $currentVersion
+                if ($isWindows) { Build-Windows; Package-Windows $currentVersion }
+                elseif ($isLinux) { Build-Linux; Package-Linux $currentVersion }
+                elseif ($isMacOS) { Build-MacOS; Package-MacOS $currentVersion }
             }
             "4" {
                 if (-not $isMacOS) { throw "iOS builds are only supported on macOS" }
@@ -243,7 +231,7 @@ function Main {
             }
             "5" {
                 if (-not $isMacOS) { throw "iOS builds are only supported on macOS" }
-                Build-Android; Package-Android $version
+                Build-Android; Package-Android $currentVersion
                 Write-Output ""
                 Write-Output "=== Building iOS ==="
                 & $flutterBin build ios --release --no-codesign
@@ -252,38 +240,43 @@ function Main {
             }
             "6" {
                 if (-not $isMacOS) { throw "iOS/macOS builds are only supported on macOS" }
-                Build-Android; Package-Android $version
+                Build-Android; Package-Android $currentVersion
                 Write-Output ""
                 Write-Output "=== Building iOS ==="
                 & $flutterBin build ios --release --no-codesign
                 if ($LASTEXITCODE -ne 0) { throw "iOS build failed" }
                 Write-Output "[OK] iOS built"
-                Build-MacOS; Package-MacOS $version
+                Build-MacOS; Package-MacOS $currentVersion
             }
             "0" {
                 Write-Output "Exited"
                 exit 0
             }
             "all" {
-                Build-Android; Package-Android $version
-                if ($isWindows) { Build-Windows; Package-Windows $version }
-                elseif ($isLinux) { Build-Linux; Package-Linux $version }
-                elseif ($isMacOS) { Build-MacOS; Package-MacOS $version }
+                Build-Android; Package-Android $currentVersion
+                if ($isWindows) { Build-Windows; Package-Windows $currentVersion }
+                elseif ($isLinux) { Build-Linux; Package-Linux $currentVersion }
+                elseif ($isMacOS) { Build-MacOS; Package-MacOS $currentVersion }
             }
             "android" {
-                Build-Android; Package-Android $version
+                Build-Android; Package-Android $currentVersion
             }
             "desktop" {
-                if ($isWindows) { Build-Windows; Package-Windows $version }
-                elseif ($isLinux) { Build-Linux; Package-Linux $version }
-                elseif ($isMacOS) { Build-MacOS; Package-MacOS $version }
+                if ($isWindows) { Build-Windows; Package-Windows $currentVersion }
+                elseif ($isLinux) { Build-Linux; Package-Linux $currentVersion }
+                elseif ($isMacOS) { Build-MacOS; Package-MacOS $currentVersion }
             }
             default {
                 throw "Unknown option: $choice"
             }
         }
 
-        Bump-Version $version
+        $newVersion = Bump-Patch $currentVersion
+        Update-Pubspec $newVersion
+        Write-Output ""
+        Write-Output "=========================================="
+        Write-Output "  Done! v$currentVersion -> v$newVersion (next)"
+        Write-Output "=========================================="
     } catch {
         Write-Output "[FAIL] $_"
         exit 1

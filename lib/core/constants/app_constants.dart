@@ -1,14 +1,9 @@
-﻿/// 应用全局常量
+/// 应用全局常量
 class AppConstants {
   AppConstants._();
 
   /// 应用名称
   static const String appName = 'Asset Management';
-
-  /// 版本号（由 build_all.ps1 自动更新）
-  static const String appVersion = '0.0.2';
-  static const String buildNumber = '26061319';
-  static const String appVersionFull = '$appVersion+$buildNumber';
 
   /// 数据库
   static const String dbName = 'asset_management.db';
@@ -85,20 +80,3 @@ class AppConstants {
     return 'other';
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
