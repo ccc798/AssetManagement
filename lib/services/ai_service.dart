@@ -24,7 +24,7 @@ class AiService {
     );
   }
 
-  /// 鑾峰彇褰撳墠 AI 閰嶇疆
+  /// 获取当前 AI 配置
   Future<BackupConfig> _getConfig() async {
     return _configDao.getConfig();
   }
