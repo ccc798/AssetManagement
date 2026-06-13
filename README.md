@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Asset Management
 
 > 个人资产管理系统 — 记录、追踪、分析每一笔资产的价值与成本
@@ -377,3 +378,6 @@ final Map<String, Map<String, String>> _allLocales = {
 GNU General Public License v3.0
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+=======
+# AssetManagement
+>>>>>>> f5ef88f9cb9c068b6e446d784f4fd5945df8460b
