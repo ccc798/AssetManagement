@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-
 # Asset Management
 
 声明：本项目使用reasonix+deepseek编写而成，项目图标使用豆包AI生产，如果有不符合代码规范或严重bug的地方，一定是本人对编码和reasonix使用不熟悉，并不代表reasonix和deepseek的真实水平。
@@ -10,10 +8,10 @@
 > 个人资产管理系统 — 记录、追踪、分析每一笔资产的价值与成本
 > Personal asset management system — track, analyze, and manage every item you own.
 
-!\[Flutter]\(https\://img.shields.io/badge/Flutter-3.22+-blue)
-!\[Platform]\(https\://img.shields.io/badge/Platform-Android%20|%20Windows%20|%20Linux%20|%20macOS%20|%20iOS-brightgreen)
-!\[License]\(https\://img.shields.io/badge/License-GPLv3-blue)
-!\[i18n]\(https\://img.shields.io/badge/i18n-zh%20|%20en-orange)
+![Flutter](https://img.shields.io/badge/Flutter-3.22+-blue)
+![Platform](https://img.shields.io/badge/Platform-Android%20|%20Windows%20|%20Linux%20|%20macOS%20|%20iOS-brightgreen)
+![License](https://img.shields.io/badge/License-GPLv3-blue)
+![i18n](https://img.shields.io/badge/i18n-zh%20|%20en-orange)
 
 ***
 
@@ -363,9 +361,5 @@ final Map<String, Map<String, String>> _allLocales = {
 
 GNU General Public License v3.0
 
-# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-# AssetManagement
-
-> > > > > > > f5ef88f9cb9c068b6e446d784f4fd5945df8460b
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
