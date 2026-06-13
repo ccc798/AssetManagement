@@ -1,6 +1,9 @@
 <<<<<<< HEAD
 # Asset Management
 
+声明：本项目使用reasonix+deepseek编写而成，项目图标使用豆包AI生产，如果有不符合代码规范或严重bug的地方，一定是本人对编码和reasonix使用不熟悉，并不代表reasonix和deepseek的真实水平。
+本项目的创立之初只是没有找到好用的类似的软件，或者软件没有找到我，制作这个项目也只是为了个人使用，分享出来也只是给大家提供多一个选择。
+
 > 个人资产管理系统 — 记录、追踪、分析每一笔资产的价值与成本
 > Personal asset management system — track, analyze, and manage every item you own.
 
@@ -21,7 +24,6 @@
 - [数据模型 / Data Model](#数据模型--data-model)
 - [使用指南 / Usage Guide](#使用指南--usage-guide)
 - [技术栈 / Tech Stack](#技术栈--tech-stack)
-- [构建与部署 / Build & Deploy](#构建与部署--build--deploy)
 - [许可证 / License](#许可证--license)
 
 ---
@@ -340,36 +342,6 @@ final Map<String, Map<String, String>> _allLocales = {
 | 配置数据 | `appDocDir/asset_management_config.json` | AI/WebDAV/主题配置 |
 | 本地备份 | 公开 Downloads 目录 | JSON 格式完整备份 |
 | CSV 导出 | 公开 Downloads 目录 | UTF-8 BOM CSV |
-
----
-
-## 构建与部署 / Build & Deploy
-
-### 部署到 GitHub
-
-项目包含交互式部署脚本 `deploy_github.ps1`：
-
-```powershell
-.\deploy_github.ps1
-```
-
-脚本按步骤引导：
-1. 检查 Git 环境
-2. 初始化仓库（如需要）
-3. 配置远程仓库 URL
-4. 选择提交方式（全部/变更/自定义）
-5. 推送到 GitHub
-
-### .gitignore 覆盖范围
-
-| 排除类别 | 内容 |
-|----------|------|
-| 测试 | `test/` 目录 |
-| 构建 | `build/`, `*.apk`, `*.aab`, `*.ipa` |
-| 生成代码 | `GeneratedPluginRegistrant.*` |
-| 本地配置 | `local.properties`, `.env`, `*.local.yaml` |
-| IDE | `.idea/`, `.vscode/`, `*.iml` |
-| OS | `.DS_Store`, `Thumbs.db`, `*.swp` |
 
 ---
 
