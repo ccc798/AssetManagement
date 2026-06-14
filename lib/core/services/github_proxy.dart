@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
 
@@ -24,22 +25,23 @@ class GithubProxyService {
 
   final Dio _dio = Dio();
 
-  Future<List<String>> testAndSortProxies() async {
-    final results = <_ProxyResult>[];
+  Future<List<ProxyResult>> testAndSortProxies() async {
+    final futures = <Future<ProxyResult>>[];
 
     for (final proxy in _defaultProxies) {
-      final latency = await _testLatency(proxy);
-      if (latency >= 0) {
-        results.add(_ProxyResult(proxy: proxy, latency: latency));
-      }
+      futures.add(_testLatencyAsync(proxy));
     }
 
+    final results = await Future.wait(futures);
+    
+    results.removeWhere((r) => r.latency < 0);
+    
     results.sort((a, b) => a.latency.compareTo(b.latency));
     
-    return results.map((r) => r.proxy).toList();
+    return results;
   }
 
-  Future<int> _testLatency(String proxy) async {
+  Future<ProxyResult> _testLatencyAsync(String proxy) async {
     try {
       final url = '${proxy}https://github.com/favicon.ico';
       final stopwatch = Stopwatch()..start();
@@ -53,9 +55,9 @@ class GithubProxyService {
       );
       
       stopwatch.stop();
-      return stopwatch.elapsedMilliseconds;
+      return ProxyResult(proxy: proxy, latency: stopwatch.elapsedMilliseconds);
     } catch (_) {
-      return -1;
+      return ProxyResult(proxy: proxy, latency: -1);
     }
   }
 
@@ -106,11 +108,11 @@ class GithubProxyService {
   }
 }
 
-class _ProxyResult {
+class ProxyResult {
   final String proxy;
   final int latency;
 
-  _ProxyResult({
+  ProxyResult({
     required this.proxy,
     required this.latency,
   });

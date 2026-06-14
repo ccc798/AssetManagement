@@ -50,8 +50,9 @@ class VersionService {
   static Future<String?> downloadApkWithProxy(
     String downloadUrl,
     bool useProxy,
-    void Function(int, int)? onProgress,
-  ) async {
+    void Function(int, int)? onProgress, {
+    List<String> proxies = const [],
+  }) async {
     final dir = await getExternalStorageDirectory();
     if (dir == null) return null;
 
@@ -60,7 +61,14 @@ class VersionService {
 
     if (useProxy) {
       final proxyService = GithubProxyService();
-      final sortedProxies = await proxyService.testAndSortProxies();
+      List<String> sortedProxies;
+      
+      if (proxies.isNotEmpty) {
+        sortedProxies = proxies;
+      } else {
+        final results = await proxyService.testAndSortProxies();
+        sortedProxies = results.map((r) => r.proxy).toList();
+      }
       
       if (sortedProxies.isNotEmpty) {
         final result = await proxyService.downloadWithProxy(

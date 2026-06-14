@@ -454,6 +454,9 @@ const Map<String, String> zh = <String, String>{
   'version.github': 'GitHub 主页',
   'version.githubProxy': 'GitHub加速下载',
   'version.githubProxyDesc': '启用后将使用加速节点下载更新',
+  'version.selectMirror': '选择镜像节点',
+  'version.confirmDownload': '确认下载',
+  'version.testingProxies': '正在测试加速节点...',
 
   'ai.ocrInvoice': '识别发票',
   'ai.ocrWarranty': '识别保修卡',

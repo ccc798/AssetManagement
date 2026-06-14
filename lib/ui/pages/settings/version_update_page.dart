@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import '../../../core/i18n/translations.dart';
 import '../../../core/services/app_info_service.dart';
+import '../../../core/services/github_proxy.dart';
 import '../../../core/services/version_service.dart';
 import '../../providers/settings_provider.dart';
 
@@ -63,19 +64,49 @@ class _VersionUpdatePageState extends ConsumerState<VersionUpdatePage> {
   Future<void> _downloadUpdate() async {
     if (_downloadUrl == null) return;
 
+    final config = await ref.read(configProvider.future);
+    final useProxy = config.githubProxyEnabled;
+
+    if (!useProxy) {
+      await _startDownload([], _downloadUrl!);
+      return;
+    }
+
+    await _showProxySelectionDialog(_downloadUrl!);
+  }
+
+  Future<void> _showProxySelectionDialog(String downloadUrl) async {
+    final loc = ref.read(localeCodeProvider);
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return ProxySelectionDialog(
+          downloadUrl: downloadUrl,
+          onSelect: (selectedProxy) {
+            Navigator.pop(context);
+            _startDownload([selectedProxy], downloadUrl);
+          },
+          onCancel: () {
+            Navigator.pop(context);
+          },
+          locale: loc,
+        );
+      },
+    );
+  }
+
+  Future<void> _startDownload(List<String> proxies, String downloadUrl) async {
     setState(() {
       _isDownloading = true;
       _downloadProgress = '0%';
     });
 
     try {
-      final configAsync = ref.read(configProvider.future);
-      final config = await configAsync;
-      final useProxy = config.githubProxyEnabled;
-
       final result = await VersionService.downloadApkWithProxy(
-        _downloadUrl!,
-        useProxy,
+        downloadUrl,
+        proxies.isNotEmpty,
         (received, total) {
           if (total != -1) {
             final progress = ((received / total) * 100).toStringAsFixed(0);
@@ -84,6 +115,7 @@ class _VersionUpdatePageState extends ConsumerState<VersionUpdatePage> {
             });
           }
         },
+        proxies: proxies,
       );
 
       if (result != null) {
@@ -210,6 +242,137 @@ class _VersionUpdatePageState extends ConsumerState<VersionUpdatePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class ProxySelectionDialog extends StatefulWidget {
+  final String downloadUrl;
+  final Function(String) onSelect;
+  final Function() onCancel;
+  final String locale;
+
+  const ProxySelectionDialog({
+    super.key,
+    required this.downloadUrl,
+    required this.onSelect,
+    required this.onCancel,
+    required this.locale,
+  });
+
+  @override
+  State<ProxySelectionDialog> createState() => _ProxySelectionDialogState();
+}
+
+class _ProxySelectionDialogState extends State<ProxySelectionDialog> {
+  List<ProxyResult> _proxyResults = [];
+  bool _isTesting = true;
+  String? _selectedProxy;
+
+  @override
+  void initState() {
+    super.initState();
+    _testProxies();
+  }
+
+  Future<void> _testProxies() async {
+    final results = await GithubProxyService().testAndSortProxies();
+    setState(() {
+      _proxyResults = results;
+      _isTesting = false;
+      if (results.isNotEmpty) {
+        _selectedProxy = results.first.proxy;
+      }
+    });
+  }
+
+  Color _getLatencyColor(int latency) {
+    if (latency <= 100) return Colors.green;
+    if (latency <= 600) return Colors.yellow;
+    return Colors.red;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.all(16),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                t('version.selectMirror', widget.locale),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: _isTesting
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(t('version.testingProxies', widget.locale)),
+                        ],
+                      ),
+                    )
+                  : _proxyResults.isEmpty
+                      ? Center(
+                          child: Text(t('version.checkFailed', widget.locale)),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          itemCount: _proxyResults.length,
+                          itemBuilder: (context, index) {
+                            final proxy = _proxyResults[index];
+                            return RadioListTile(
+                              value: proxy.proxy,
+                              groupValue: _selectedProxy,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedProxy = value;
+                                });
+                              },
+                              title: Text(proxy.proxy),
+                              subtitle: Text(
+                                '${proxy.latency}ms',
+                                style: TextStyle(color: _getLatencyColor(proxy.latency)),
+                              ),
+                            );
+                          },
+                        ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: widget.onCancel,
+                      child: Text(t('confirm.cancel', widget.locale)),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _selectedProxy != null
+                          ? () => widget.onSelect(_selectedProxy!)
+                          : null,
+                      child: Text(t('version.confirmDownload', widget.locale)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

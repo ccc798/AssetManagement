@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
-import '../../../data/models/asset_item.dart';
-import '../../../data/models/backup_config.dart';
+import '../data/models/asset_item.dart';
+import '../data/models/backup_config.dart';
 
 class NotificationService {
   NotificationService._();

@@ -454,6 +454,9 @@ const Map<String, String> en = <String, String>{
   'version.github': 'GitHub Homepage',
   'version.githubProxy': 'GitHub Proxy',
   'version.githubProxyDesc': 'Use proxy to speed up download',
+  'version.selectMirror': 'Select Mirror Node',
+  'version.confirmDownload': 'Confirm Download',
+  'version.testingProxies': 'Testing proxy nodes...',
 
   'ai.ocrInvoice': 'Scan Invoice',
   'ai.ocrWarranty': 'Scan Warranty',
