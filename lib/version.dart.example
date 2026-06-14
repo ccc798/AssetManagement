@@ -1,3 +1,4 @@
+//将.example后缀删除即可使用脚本打包，脚本打包版本号会自增。
 class AppVersion {
   static const String version = '0.0.5';
   
