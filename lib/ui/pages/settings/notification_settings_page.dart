@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/translations.dart';
 import '../../../data/models/backup_config.dart';
@@ -41,6 +42,77 @@ class _NotificationSettingsPageState extends ConsumerState<NotificationSettingsP
         _lifetimeReminderDays = config.lifetimeReminderDays;
         _reminderTime = config.reminderTime;
       });
+    }
+  }
+
+  static const MethodChannel _notificationChannel = MethodChannel('com.assetheeper.asset_management/notification');
+
+  Future<void> _handleNotificationEnable() async {
+    final loc = ref.read(localeCodeProvider);
+    
+    final hasPermission = await NotificationService.instance.requestPermissions();
+    if (hasPermission) {
+      setState(() {
+        _notificationsEnabled = true;
+      });
+      AppToast.capsule(context, t('notification.permissionGranted', loc), Colors.green);
+      return;
+    }
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(t('notification.permissionTitle', loc)),
+          content: Text(t('notification.permissionMessage', loc)),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: Text(t('confirm.cancel', loc)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: Text(t('notification.goToSettings', loc)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      await _openNotificationSettings();
+      
+      await Future.delayed(const Duration(seconds: 1));
+      
+      final hasPermissionAfter = await NotificationService.instance.requestPermissions();
+      if (hasPermissionAfter) {
+        setState(() {
+          _notificationsEnabled = true;
+        });
+        AppToast.capsule(context, t('notification.permissionGranted', loc), Colors.green);
+      } else {
+        setState(() {
+          _notificationsEnabled = false;
+        });
+        AppToast.capsule(context, t('notification.permissionDenied', loc), Colors.orange);
+      }
+    } else {
+      setState(() {
+        _notificationsEnabled = false;
+      });
+      AppToast.capsule(context, t('notification.permissionDenied', loc), Colors.orange);
+    }
+  }
+
+  Future<void> _openNotificationSettings() async {
+    try {
+      await _notificationChannel.invokeMethod('openNotificationSettings');
+    } catch (e) {
     }
   }
 
@@ -118,10 +190,14 @@ class _NotificationSettingsPageState extends ConsumerState<NotificationSettingsP
                       ),
                       Switch(
                         value: _notificationsEnabled,
-                        onChanged: (value) {
-                          setState(() {
-                            _notificationsEnabled = value;
-                          });
+                        onChanged: (value) async {
+                          if (value) {
+                            await _handleNotificationEnable();
+                          } else {
+                            setState(() {
+                              _notificationsEnabled = false;
+                            });
+                          }
                         },
                         activeThumbColor: theme.colorScheme.primary,
                       ),

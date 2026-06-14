@@ -64,6 +64,13 @@ class _VersionUpdatePageState extends ConsumerState<VersionUpdatePage> {
   Future<void> _downloadUpdate() async {
     if (_downloadUrl == null) return;
 
+    final canInstall = await VersionService.canRequestPackageInstalls();
+    if (!canInstall) {
+      if (!mounted) return;
+      _showPermissionDialog();
+      return;
+    }
+
     final config = await ref.read(configProvider.future);
     final useProxy = config.githubProxyEnabled;
 
@@ -73,6 +80,81 @@ class _VersionUpdatePageState extends ConsumerState<VersionUpdatePage> {
     }
 
     await _showProxySelectionDialog(_downloadUrl!);
+  }
+
+  void _showPermissionDialog() {
+    final loc = ref.read(localeCodeProvider);
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(t('version.permissionTitle', loc)),
+          content: Text(t('version.permissionMessage', loc)),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _startDownloadWithoutInstall();
+              },
+              child: Text(t('confirm.cancel', loc)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                VersionService.openInstallUnknownAppsSettings();
+              },
+              child: Text(t('version.goToSettings', loc)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _startDownloadWithoutInstall() async {
+    final loc = ref.read(localeCodeProvider);
+    
+    try {
+      final result = await VersionService.downloadApkWithProxy(
+        _downloadUrl!,
+        false,
+        (received, total) {
+          if (total != -1) {
+            final progress = ((received / total) * 100).toStringAsFixed(0);
+            setState(() {
+              _downloadProgress = '$progress%';
+              _isDownloading = true;
+            });
+          }
+        },
+        proxies: [],
+      );
+
+      if (result != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(t('version.downloadSaved', loc))),
+          );
+        }
+      } else {
+        throw Exception('下载失败');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(t('version.downloadTimeout', loc))),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _downloadProgress = null;
+        });
+      }
+    }
   }
 
   Future<void> _showProxySelectionDialog(String downloadUrl) async {

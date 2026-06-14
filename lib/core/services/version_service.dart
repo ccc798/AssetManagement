@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:url_launcher/url_launcher_string.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:asset_management/version.dart';
 import 'github_proxy.dart';
@@ -8,8 +8,21 @@ import 'github_proxy.dart';
 class VersionService {
   static const String _githubApiUrl = 'https://api.github.com/repos/ccc798/AssetManagement/releases/latest';
   static const String _githubHomeUrl = 'https://github.com/ccc798/AssetManagement';
+  static const MethodChannel _installerChannel = MethodChannel('com.assetheeper.asset_management/installer');
 
   static String get githubHomeUrl => _githubHomeUrl;
+
+  static Future<String> _getDownloadsDirectory() async {
+    final downloadsDir = Directory('/storage/emulated/0/Download');
+    if (await downloadsDir.exists()) {
+      return downloadsDir.path;
+    }
+    final dir = await getExternalStorageDirectory();
+    if (dir != null) {
+      return dir.path;
+    }
+    return (await getApplicationDocumentsDirectory()).path;
+  }
 
   static Future<VersionInfo?> checkForUpdate() async {
     try {
@@ -53,11 +66,14 @@ class VersionService {
     void Function(int, int)? onProgress, {
     List<String> proxies = const [],
   }) async {
-    final dir = await getExternalStorageDirectory();
-    if (dir == null) return null;
+    final dirPath = await _getDownloadsDirectory();
+    final dir = Directory(dirPath);
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
 
     final fileName = downloadUrl.split('/').last;
-    final savePath = '${dir.path}/$fileName';
+    final savePath = '$dirPath/$fileName';
 
     if (useProxy) {
       final proxyService = GithubProxyService();
@@ -106,14 +122,26 @@ class VersionService {
         return false;
       }
 
-      final uri = Uri.file(apkPath);
-      if (await canLaunchUrlString(uri.toString())) {
-        await launchUrlString(uri.toString(), mode: LaunchMode.externalApplication);
-        return true;
-      }
+      final result = await _installerChannel.invokeMethod<bool>('installApk', apkPath);
+      return result ?? false;
+    } catch (e) {
       return false;
-    } catch (_) {
+    }
+  }
+
+  static Future<bool> canRequestPackageInstalls() async {
+    try {
+      final result = await _installerChannel.invokeMethod<bool>('canRequestPackageInstalls');
+      return result ?? false;
+    } catch (e) {
       return false;
+    }
+  }
+
+  static Future<void> openInstallUnknownAppsSettings() async {
+    try {
+      await _installerChannel.invokeMethod('openInstallUnknownAppsSettings');
+    } catch (e) {
     }
   }
 
