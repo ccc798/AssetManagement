@@ -16,6 +16,10 @@ class BackupConfig {
     this.themeMode = 'system',
     this.colorSeed = 0xFF5C6BC0,
     this.locale = 'zh',
+    this.notificationsEnabled = false,
+    this.warrantyReminderDays = 7,
+    this.lifetimeReminderDays = 30,
+    this.reminderTime = '09:00',
   });
 
   final String webdavUrl;
@@ -33,6 +37,12 @@ class BackupConfig {
   final String themeMode;
   final int colorSeed;
   final String locale;
+  
+  /// 通知提醒设置
+  final bool notificationsEnabled;
+  final int warrantyReminderDays;
+  final int lifetimeReminderDays;
+  final String reminderTime;
 
   static const BackupConfig default_ = BackupConfig();
 
@@ -52,6 +62,10 @@ class BackupConfig {
         'themeMode': themeMode,
         'colorSeed': colorSeed,
         'locale': locale,
+        'notificationsEnabled': notificationsEnabled,
+        'warrantyReminderDays': warrantyReminderDays,
+        'lifetimeReminderDays': lifetimeReminderDays,
+        'reminderTime': reminderTime,
       };
 
   factory BackupConfig.fromJson(Map<String, dynamic> json) => BackupConfig(
@@ -72,6 +86,10 @@ class BackupConfig {
         themeMode: json['themeMode'] as String? ?? 'system',
         colorSeed: json['colorSeed'] as int? ?? 0xFF5C6BC0,
         locale: json['locale'] as String? ?? 'zh',
+        notificationsEnabled: json['notificationsEnabled'] as bool? ?? false,
+        warrantyReminderDays: json['warrantyReminderDays'] as int? ?? 7,
+        lifetimeReminderDays: json['lifetimeReminderDays'] as int? ?? 30,
+        reminderTime: json['reminderTime'] as String? ?? '09:00',
       );
 
   BackupConfig copyWith({
@@ -90,6 +108,10 @@ class BackupConfig {
     String? themeMode,
     int? colorSeed,
     String? locale,
+    bool? notificationsEnabled,
+    int? warrantyReminderDays,
+    int? lifetimeReminderDays,
+    String? reminderTime,
   }) {
     return BackupConfig(
       webdavUrl: webdavUrl ?? this.webdavUrl,
@@ -107,6 +129,10 @@ class BackupConfig {
       themeMode: themeMode ?? this.themeMode,
       colorSeed: colorSeed ?? this.colorSeed,
       locale: locale ?? this.locale,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      warrantyReminderDays: warrantyReminderDays ?? this.warrantyReminderDays,
+      lifetimeReminderDays: lifetimeReminderDays ?? this.lifetimeReminderDays,
+      reminderTime: reminderTime ?? this.reminderTime,
     );
   }
 }

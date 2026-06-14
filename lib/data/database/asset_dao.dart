@@ -79,4 +79,14 @@ class AssetDao {
     await _db.init();
     return _db.getArchived();
   }
+
+  Future<List<AssetItem>> getFavorites() async {
+    await _db.init();
+    return _db.getFavorites();
+  }
+
+  Future<void> toggleFavorite(int id) async {
+    await _db.init();
+    return _db.toggleFavorite(id);
+  }
 }

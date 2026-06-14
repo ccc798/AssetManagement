@@ -21,6 +21,8 @@ class AssetItem extends Equatable {
     this.plannedLifetimeDays = 365,
     this.isArchived = false,
     this.isDeleted = false,
+    this.isFavorite = false,
+    this.images = const [],
     this.warrantyPeriod,
     this.warrantyExpiry,
     this.insuranceInfo,
@@ -43,11 +45,13 @@ class AssetItem extends Equatable {
   final List<String> tags;
   final int rating;
   final int plannedLifetimeDays;
-  final bool isArchived;    // 归档标记（独立于删除）
-  final bool isDeleted;     // 删除标记
-  final String? warrantyPeriod;   // 保修期限描述，如「1年」
-  final DateTime? warrantyExpiry; // 保修到期日期
-  final String? insuranceInfo;    // 保险信息
+  final bool isArchived;
+  final bool isDeleted;
+  final bool isFavorite;
+  final List<String> images;
+  final String? warrantyPeriod;
+  final DateTime? warrantyExpiry;
+  final String? insuranceInfo;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -82,7 +86,8 @@ class AssetItem extends Equatable {
         'purchaseDate': purchaseDate?.toIso8601String(),
         'notes': notes, 'screenshotPath': screenshotPath, 'aiRawData': aiRawData,
         'tags': tags, 'rating': rating, 'plannedLifetimeDays': plannedLifetimeDays,
-        'isArchived': isArchived, 'isDeleted': isDeleted,
+        'isArchived': isArchived, 'isDeleted': isDeleted, 'isFavorite': isFavorite,
+        'images': images,
         'warrantyPeriod': warrantyPeriod,
         'warrantyExpiry': warrantyExpiry?.toIso8601String(),
         'insuranceInfo': insuranceInfo,
@@ -106,6 +111,8 @@ class AssetItem extends Equatable {
         plannedLifetimeDays: json['plannedLifetimeDays'] as int? ?? 365,
         isArchived: json['isArchived'] as bool? ?? false,
         isDeleted: json['isDeleted'] as bool? ?? false,
+        isFavorite: json['isFavorite'] as bool? ?? false,
+        images: (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
         warrantyPeriod: json['warrantyPeriod'] as String?,
         warrantyExpiry: json['warrantyExpiry'] != null
             ? DateTime.parse(json['warrantyExpiry'] as String) : null,
@@ -121,12 +128,14 @@ class AssetItem extends Equatable {
     required DateTime purchaseDate, String brand = '', String notes = '',
     String screenshotPath = '', String aiRawData = '',
     List<String> tags = const [], int rating = 0, int plannedLifetimeDays = 365,
+    bool isFavorite = false, List<String> images = const [],
     String? warrantyPeriod, DateTime? warrantyExpiry, String? insuranceInfo,
   }) {
     return AssetItem(uuid: const Uuid().v4(), name: name, category: category,
         brand: brand, price: price, purchaseDate: purchaseDate, notes: notes,
         screenshotPath: screenshotPath, aiRawData: aiRawData, tags: tags,
         rating: rating, plannedLifetimeDays: plannedLifetimeDays,
+        isFavorite: isFavorite, images: images,
         warrantyPeriod: warrantyPeriod, warrantyExpiry: warrantyExpiry,
         insuranceInfo: insuranceInfo);
   }
@@ -136,7 +145,8 @@ class AssetItem extends Equatable {
     String? brand, double? price, DateTime? purchaseDate,
     String? notes, String? screenshotPath, String? aiRawData,
     List<String>? tags, int? rating, int? plannedLifetimeDays,
-    bool? isArchived, bool? isDeleted,
+    bool? isArchived, bool? isDeleted, bool? isFavorite,
+    List<String>? images,
     Object? warrantyPeriod = _sentinel,
     Object? warrantyExpiry = _sentinel,
     Object? insuranceInfo = _sentinel,
@@ -154,6 +164,8 @@ class AssetItem extends Equatable {
       plannedLifetimeDays: plannedLifetimeDays ?? this.plannedLifetimeDays,
       isArchived: isArchived ?? this.isArchived,
       isDeleted: isDeleted ?? this.isDeleted,
+      isFavorite: isFavorite ?? this.isFavorite,
+      images: images ?? this.images,
       warrantyPeriod: identical(warrantyPeriod, _sentinel) ? this.warrantyPeriod : warrantyPeriod as String?,
       warrantyExpiry: identical(warrantyExpiry, _sentinel) ? this.warrantyExpiry : warrantyExpiry as DateTime?,
       insuranceInfo: identical(insuranceInfo, _sentinel) ? this.insuranceInfo : insuranceInfo as String?,
@@ -166,7 +178,7 @@ class AssetItem extends Equatable {
   List<Object?> get props => [
         id, uuid, name, category, brand, price, purchaseDate,
         notes, screenshotPath, aiRawData, tags, rating,
-        plannedLifetimeDays, isArchived, isDeleted,
+        plannedLifetimeDays, isArchived, isDeleted, isFavorite, images,
         warrantyPeriod, warrantyExpiry, insuranceInfo,
         createdAt, updatedAt,
       ];

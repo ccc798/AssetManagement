@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/translations.dart';
+import '../../../core/services/image_service.dart';
 import '../../../data/database/asset_dao.dart';
 import '../../../data/models/asset_item.dart';
 import '../../../services/ai_service.dart';
@@ -31,6 +32,9 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
   File? _screenshotFile;
   bool _isAnalyzing = false;
   Map<String, dynamic>? _aiResult;
+
+  List<String> _images = [];
+  final ImageService _imageService = ImageService.instance;
 
   List<Map<String, dynamic>> _pendingItems = [];
   int _currentItemIndex = 0;
@@ -65,6 +69,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
     _selectedCategory = item.category;
     _plannedLifetimeDays = item.plannedLifetimeDays;
     _rating = item.rating;
+    _images = List.from(item.images);
     if (item.screenshotPath.isNotEmpty) {
       _screenshotFile = File(item.screenshotPath);
     }
@@ -141,6 +146,8 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
               onWarrantyExpiryChanged: (date) => setState(() => _warrantyExpiry = date),
               onInsuranceChanged: (val) => setState(() => _insuranceInfo = val),
             ),
+            const SizedBox(height: 16),
+            _buildImageSection(theme),
             const SizedBox(height: 32),
             _buildSubmitButton(theme),
             if (_pendingItems.length > 1) ...[
@@ -231,6 +238,97 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       ),
       maxLines: 3,
     );
+  }
+
+  Widget _buildImageSection(ThemeData theme) {
+    final loc2 = ref.read(localeCodeProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('add.images', loc2),
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (_images.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _images.asMap().entries.map((entry) {
+              final index = entry.key;
+              final path = entry.value;
+              return Stack(
+                children: [
+                  _imageService.buildImageThumbnail(path, size: 80),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: () => setState(() {
+                        _images.removeAt(index);
+                      }),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.close, color: Colors.white, size: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            if (_images.length < 9)
+              ElevatedButton.icon(
+                onPressed: _pickImages,
+                icon: const Icon(Icons.photo_library),
+                label: Text(t('add.pickImages', loc2)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  foregroundColor: theme.colorScheme.onPrimaryContainer,
+                ),
+              ),
+            const SizedBox(width: 8),
+            if (_images.length < 9)
+              ElevatedButton.icon(
+                onPressed: _takePhoto,
+                icon: const Icon(Icons.camera_alt),
+                label: Text(t('add.takePhoto', loc2)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.secondaryContainer,
+                  foregroundColor: theme.colorScheme.onSecondaryContainer,
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickImages() async {
+    final paths = await _imageService.pickImages(maxImages: 9 - _images.length);
+    if (paths.isNotEmpty) {
+      setState(() {
+        _images.addAll(paths);
+      });
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    final path = await _imageService.takePhoto();
+    if (path.isNotEmpty) {
+      setState(() {
+        _images.add(path);
+      });
+    }
   }
 
   Widget _buildAiResultBanner() {
@@ -411,6 +509,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       plannedLifetimeDays: _plannedLifetimeDays,
       rating: _rating,
       screenshotPath: _screenshotFile?.path ?? widget.editItem!.screenshotPath,
+      images: _images,
       warrantyPeriod: wp.isNotEmpty ? wp : null,
       warrantyExpiry: _warrantyExpiry,
       insuranceInfo: ins.isNotEmpty ? ins : null,
@@ -437,6 +536,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       plannedLifetimeDays: _plannedLifetimeDays,
       rating: _rating,
       screenshotPath: _screenshotFile?.path ?? '',
+      images: _images,
       aiRawData: _pendingItems.length > 1 
           ? t('add.aiRawDataMultiple', ref.read(localeCodeProvider))
               .replaceAll('{n}', '${_pendingItems.length}')
@@ -468,6 +568,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       plannedLifetimeDays: _plannedLifetimeDays,
       rating: _rating,
       screenshotPath: _screenshotFile?.path ?? '',
+      images: _images,
       aiRawData: _aiResult != null ? _aiResult.toString() : '',
       warrantyPeriod: wp.isNotEmpty ? wp : null,
       warrantyExpiry: _warrantyExpiry,

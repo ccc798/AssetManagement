@@ -12,17 +12,23 @@ import '../../data/models/asset_item.dart';
 class AssetCard extends ConsumerWidget {
   final AssetItem item;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final VoidCallback? onDelete;
   final VoidCallback? onEdit;
   final VoidCallback? onArchive;
+  final VoidCallback? onFavorite;
+  final bool isSelected;
 
   const AssetCard({
     super.key,
     required this.item,
     this.onTap,
+    this.onLongPress,
     this.onDelete,
     this.onEdit,
     this.onArchive,
+    this.onFavorite,
+    this.isSelected = false,
   });
 
   @override
@@ -35,6 +41,14 @@ class AssetCard extends ConsumerWidget {
       endActionPane: ActionPane(
         motion: const ScrollMotion(),
         children: [
+          if (onFavorite != null)
+            SlidableAction(
+              onPressed: (_) => onFavorite?.call(),
+              backgroundColor: Colors.amber,
+              foregroundColor: Colors.white,
+              icon: item.isFavorite ? Icons.star : Icons.star_border,
+              label: item.isFavorite ? t('favorite.remove', ref.read(localeCodeProvider)) : t('favorite.add', ref.read(localeCodeProvider)),
+            ),
           if (onEdit != null)
             SlidableAction(
               onPressed: (_) => onEdit?.call(),
@@ -63,13 +77,25 @@ class AssetCard extends ConsumerWidget {
       ),
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.1) : null,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
+          onLongPress: onLongPress,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
+                // 多选复选框
+                if (isSelected)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Icon(
+                      Icons.check_circle,
+                      color: theme.colorScheme.primary,
+                      size: 24,
+                    ),
+                  ),
                 // 左侧图标
                 Container(
                   width: 48,
@@ -93,13 +119,28 @@ class AssetCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        item.name,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.name,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (item.isFavorite)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Icon(
+                                Icons.star,
+                                size: 16,
+                                color: Colors.amber,
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Row(

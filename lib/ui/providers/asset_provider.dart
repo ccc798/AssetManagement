@@ -22,6 +22,13 @@ final deletedListProvider = FutureProvider<List<AssetItem>>((ref) async {
   return dao.getDeleted();
 });
 
+/// 收藏物品列表
+final favoriteListProvider = FutureProvider<List<AssetItem>>((ref) async {
+  ref.watch(assetVersionProvider);
+  final dao = ref.read(assetDaoProvider);
+  return dao.getFavorites();
+});
+
 /// 物品列表 provider（依赖 assetVersionProvider 实现自动刷新）
 final assetListProvider = FutureProvider<List<AssetItem>>((ref) async {
   ref.watch(assetVersionProvider);

@@ -7,6 +7,7 @@ import 'backup_settings_page.dart';
 import 'category_management_page.dart';
 import 'export_page.dart';
 import 'language_settings_page.dart';
+import 'notification_settings_page.dart';
 import 'theme_settings_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -143,6 +144,27 @@ class SettingsPage extends ConsumerWidget {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const BackupSettingsPage()),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          Card(
+            child: ListTile(
+              leading: Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.notifications, color: Colors.amber),
+              ),
+              title: Text(t('notification.title', loc2)),
+              subtitle: Text(t('notification.subtitle', loc2)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationSettingsPage()),
               ),
             ),
           ),

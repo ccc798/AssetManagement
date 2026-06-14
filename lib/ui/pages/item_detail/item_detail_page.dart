@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/i18n/translations.dart';
+import '../../../core/services/image_service.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/money_utils.dart';
 import '../../../data/models/asset_item.dart';
 import '../../providers/asset_provider.dart';
 import '../../widgets/app_toast.dart';
+import '../image_viewer/image_viewer_page.dart';
 
 /// 物品详情页
 class ItemDetailPage extends ConsumerWidget {
@@ -40,6 +42,12 @@ class ItemDetailPage extends ConsumerWidget {
           // 头部信息卡
           _buildHeaderCard(theme, days, cost, remainingRatio, loc),
           const SizedBox(height: 16),
+
+          // 图片画廊
+          if (item.images.isNotEmpty) ...[
+            _buildImagesCard(context, theme, loc),
+            const SizedBox(height: 16),
+          ],
 
           // 详情卡片
           _buildDetailCard(theme, loc),
@@ -158,6 +166,51 @@ class ItemDetailPage extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildImagesCard(BuildContext context, ThemeData theme, String loc) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              t('detail.images', loc),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: item.images.asMap().entries.map((entry) {
+                final index = entry.key;
+                final path = entry.value;
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ImageViewerPage(
+                          imagePaths: item.images,
+                          initialIndex: index,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Hero(
+                    tag: 'image_$index',
+                    child: ImageService.instance.buildImageThumbnail(path, size: 100),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

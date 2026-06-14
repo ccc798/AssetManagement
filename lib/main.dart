@@ -5,6 +5,7 @@ import 'app.dart';
 import 'core/services/app_info_service.dart';
 import 'data/database/database_manager.dart';
 import 'services/backup_scheduler.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +20,8 @@ void main() async {
   await AppInfoService.init();
 
   await DatabaseManager.instance.init();
+
+  await NotificationService.instance.initialize();
 
   BackupScheduler.instance.start();
 

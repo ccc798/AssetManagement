@@ -1,5 +1,7 @@
 import 'dart:async';
+import '../data/database/asset_dao.dart';
 import '../data/database/config_dao.dart';
+import '../services/notification_service.dart';
 import '../services/webdav_service.dart';
 
 /// 自动备份调度器
@@ -11,6 +13,7 @@ class BackupScheduler {
   static final BackupScheduler instance = BackupScheduler._();
 
   final ConfigDao _configDao = ConfigDao();
+  final AssetDao _assetDao = AssetDao();
   final WebDavService _webdavService = WebDavService();
   bool _started = false;
 
@@ -19,6 +22,7 @@ class BackupScheduler {
     if (_started) return;
     _started = true;
     _checkAndBackup();
+    _checkAndNotify();
   }
 
   /// 检查并执行备份（静默）
@@ -39,6 +43,23 @@ class BackupScheduler {
       if (result['success'] == true) {
         // lastBackupAt 已在 uploadBackup 中更新
       }
+    } catch (_) {
+      // 静默失败
+    }
+  }
+
+  /// 检查并发送到期提醒
+  Future<void> _checkAndNotify() async {
+    try {
+      // 1. 检查配置
+      final config = await _configDao.getConfig();
+      if (!config.notificationsEnabled) return;
+
+      // 2. 获取所有使用中的物品
+      final items = await _assetDao.getAll();
+
+      // 3. 检查到期物品并发送通知
+      await NotificationService.instance.checkAndNotifyExpiringItems(items, config);
     } catch (_) {
       // 静默失败
     }

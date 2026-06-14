@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/i18n/translations.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../providers/asset_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../widgets/asset_card.dart';
@@ -25,47 +26,151 @@ class HomePage extends ConsumerStatefulWidget {
 class _HomePageState extends ConsumerState<HomePage> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
+  bool _isSelectMode = false;
+  final Set<int> _selectedIds = {};
 
   @override
-  void dispose() { _searchController.dispose(); super.dispose(); }
+  void dispose() { 
+    _searchController.dispose(); 
+    super.dispose(); 
+  }
+
+  void _toggleSelectMode(bool enabled) {
+    setState(() {
+      _isSelectMode = enabled;
+      if (!enabled) {
+        _selectedIds.clear();
+      }
+    });
+  }
+
+  void _toggleItemSelection(int id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _selectAll(List<AssetItem> items) {
+    setState(() {
+      _selectedIds.addAll(items.map((item) => item.id));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final sel = ref.watch(selectedCategoryProvider);
-        return Scaffold(
-      appBar: AppBar(
-        title: _isSearching ? _buildSearchField() : Text(t('home.title', ref.read(localeCodeProvider))),
-        actions: [
-          if (_isSearching)
-            IconButton(icon: const Icon(Icons.close), onPressed: () {
-              setState(() { _isSearching = false; _searchController.clear(); });
-              ref.read(searchQueryProvider.notifier).state = '';
-            })
-          else ...[
-            IconButton(icon: const Icon(Icons.search), onPressed: () => setState(() => _isSearching = true)),
-            IconButton(icon: const Icon(Icons.bar_chart), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StatisticsPage()))),
-            IconButton(icon: const Icon(Icons.settings), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
-          ],
-        ],
+    final theme = Theme.of(context);
+    final loc = ref.read(localeCodeProvider);
+
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: _isSelectMode ? _buildSelectModeAppBar(loc, theme) : _buildNormalAppBar(loc),
       ),
       body: Column(children: [_buildStatsBanner(), _buildCategoryFilter(), Expanded(child: _buildAssetList())]),
-      floatingActionButton: sel == '__archived__' || sel == '__deleted__'
-          ? null
-          : FloatingActionButton(
+      floatingActionButton: !_isSelectMode && sel != '__archived__' && sel != '__deleted__'
+          ? FloatingActionButton(
         onPressed: () async {
           final r = await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddItemPage()));
           if (r == true) ref.bumpVersion();
         },
         child: const Icon(Icons.add),
-      ),
+      )
+          : null,
+      bottomSheet: _isSelectMode && _selectedIds.isNotEmpty ? _buildBatchActionBar(loc, theme) : null,
     );
   }
+
+  Widget _buildNormalAppBar(String loc) => AppBar(
+    title: _isSearching ? _buildSearchField() : Text(t('home.title', loc)),
+    actions: [
+      if (_isSearching)
+        IconButton(icon: const Icon(Icons.close), onPressed: () {
+          setState(() { _isSearching = false; _searchController.clear(); });
+          ref.read(searchQueryProvider.notifier).state = '';
+        })
+      else ...[
+        IconButton(icon: const Icon(Icons.search), onPressed: () => setState(() => _isSearching = true)),
+        IconButton(icon: const Icon(Icons.bar_chart), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StatisticsPage()))),
+        IconButton(icon: const Icon(Icons.settings), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
+      ],
+    ],
+  );
+
+  Widget _buildSelectModeAppBar(String loc, ThemeData theme) => AppBar(
+    leading: IconButton(
+      icon: const Icon(Icons.close),
+      onPressed: () => _toggleSelectMode(false),
+    ),
+    title: Text('${_selectedIds.length} ${t('select.selected', loc)}'),
+    actions: [
+      TextButton(
+        onPressed: () {
+          final sel = ref.watch(selectedCategoryProvider);
+          final q = ref.watch(searchQueryProvider);
+          final async = q.isNotEmpty ? ref.read(searchResultsProvider(q))
+              : sel == '__archived__' ? ref.read(archivedListProvider)
+              : sel == '__deleted__' ? ref.read(deletedListProvider)
+              : sel == '__favorite__' ? ref.read(favoriteListProvider)
+              : sel != null ? ref.read(filteredByCategoryProvider(sel))
+              : ref.read(assetListProvider);
+          async.whenData((items) => _selectAll(items));
+        },
+        child: Text(t('select.all', loc)),
+      ),
+    ],
+    backgroundColor: theme.colorScheme.primary,
+    foregroundColor: Colors.white,
+  );
 
   Widget _buildSearchField() => TextField(
     controller: _searchController, autofocus: true,
     decoration: InputDecoration(hintText: t('home.searchHint', ref.read(localeCodeProvider)), border: InputBorder.none, filled: false),
-    // Note: _buildSearchField uses ref.read because it's called from build which has loc via ref.watch
     onChanged: (v) { ref.read(searchQueryProvider.notifier).state = v; ref.invalidate(searchResultsProvider(v)); },
+  );
+
+  Widget _buildBatchActionBar(String loc, ThemeData theme) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    decoration: BoxDecoration(
+      color: theme.colorScheme.surface,
+      border: Border(top: BorderSide(color: theme.dividerColor)),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => _showBatchCategoryDialog(loc),
+            child: Text(t('batch.changeCategory', loc)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () => _batchArchive(loc),
+          child: Text(t('batch.archive', loc)),
+        ),
+        const SizedBox(width: 12),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () => _batchDelete(loc),
+          child: Text(t('batch.delete', loc)),
+        ),
+      ],
+    ),
   );
 
   Widget _buildStatsBanner() {
@@ -129,6 +234,17 @@ class _HomePageState extends ConsumerState<HomePage> {
                 Text(t('home.archived', ref.read(localeCodeProvider)), style: TextStyle(color: sel == '__archived__' ? Colors.white : theme.colorScheme.onSurface, fontWeight: sel == '__archived__' ? FontWeight.w600 : FontWeight.normal)),
               ]),
             )),
+          GestureDetector(onTap: () => ref.read(selectedCategoryProvider.notifier).state = '__favorite__',
+            child: Container(
+              margin: const EdgeInsets.only(right: 8), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), alignment: Alignment.center,
+              decoration: BoxDecoration(color: sel == '__favorite__' ? Colors.amber : Colors.transparent, borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: sel == '__favorite__' ? Colors.amber : theme.dividerColor)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.star, size: 16, color: sel == '__favorite__' ? Colors.white : Colors.amber),
+                const SizedBox(width: 6),
+                Text(t('home.favorite', ref.read(localeCodeProvider)), style: TextStyle(color: sel == '__favorite__' ? Colors.white : theme.colorScheme.onSurface, fontWeight: sel == '__favorite__' ? FontWeight.w600 : FontWeight.normal)),
+              ]),
+            )),
           GestureDetector(onTap: () => ref.read(selectedCategoryProvider.notifier).state = '__deleted__',
             child: Container(
               margin: const EdgeInsets.only(right: 8), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), alignment: Alignment.center,
@@ -151,27 +267,40 @@ class _HomePageState extends ConsumerState<HomePage> {
     final q = ref.watch(searchQueryProvider);
     final archived = sel == '__archived__';
     final deleted = sel == '__deleted__';
+    final favorite = sel == '__favorite__';
     final async = q.isNotEmpty ? ref.watch(searchResultsProvider(q))
         : archived ? ref.watch(archivedListProvider)
         : deleted ? ref.watch(deletedListProvider)
+        : favorite ? ref.watch(favoriteListProvider)
         : sel != null ? ref.watch(filteredByCategoryProvider(sel))
         : ref.watch(assetListProvider);
     return async.when(
       data: (items) {
         if (items.isEmpty) {
           if (q.isNotEmpty) return EmptyStateWidget(title: t('home.noMatch', ref.read(localeCodeProvider)), subtitle: t('home.noMatchHint', ref.read(localeCodeProvider)), customPainterSize: 120);
+          if (favorite) return EmptyStateWidget(title: t('favorite.empty', ref.read(localeCodeProvider)), subtitle: t('favorite.emptyHint', ref.read(localeCodeProvider)), customPainterSize: 120);
           return EmptyStateWidget(title: t('home.empty', ref.read(localeCodeProvider)), subtitle: t('home.emptyHint', ref.read(localeCodeProvider)));
         }
         return RefreshIndicator(
           onRefresh: () async => ref.bumpVersion(),
-          child: ListView.builder(padding: const EdgeInsets.only(top: 4, bottom: 80), itemCount: items.length, itemBuilder: (ctx, i) {
+          child: ListView.builder(padding: EdgeInsets.only(top: 4, bottom: _isSelectMode ? 120 : 80), itemCount: items.length, itemBuilder: (ctx, i) {
             final item = items[i];
             return AssetCard(
+              key: ObjectKey(item.id),
               item: item,
-              onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (_) => ItemDetailPage(item: item))); ref.bumpVersion(); },
+              isSelected: _isSelectMode && _selectedIds.contains(item.id),
+              onTap: _isSelectMode ? () => _toggleItemSelection(item.id) : () async { 
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => ItemDetailPage(item: item))); 
+                ref.bumpVersion(); 
+              },
+              onLongPress: !_isSelectMode ? () {
+                _toggleSelectMode(true);
+                _selectedIds.add(item.id);
+              } : null,
               onEdit: deleted ? null : () async { final r = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddItemPage(editItem: item))); if (r == true) ref.bumpVersion(); },
-              onArchive: archived ? null : () => _confirmArchive(item),
+              onArchive: archived || favorite ? null : () => _confirmArchive(item),
               onDelete: deleted ? () => _confirmHardDelete(item) : () => _confirmDelete(item),
+              onFavorite: deleted || archived ? null : () => _toggleFavorite(item),
             );
           }),
         );
@@ -180,6 +309,103 @@ class _HomePageState extends ConsumerState<HomePage> {
       error: (err, _) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         const Icon(Icons.error_outline, size: 48, color: Colors.red), const SizedBox(height: 16), Text('${t('home.loadFailed', ref.read(localeCodeProvider))}: $err')])),
     );
+  }
+
+  void _showBatchCategoryDialog(String loc) async {
+    final cats = await ref.read(categoryListProvider.future);
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      title: Text(t('batch.changeCategory', loc)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: cats.map((cat) => ListTile(
+          leading: AppIcons.categoryIcon(cat.icon, cat.colorHex),
+          title: Text(t(AppConstants.getCategoryNameKey(cat.name), loc)),
+          onTap: () async {
+            Navigator.pop(ctx);
+            await _batchUpdateCategory(cat.name, loc);
+          },
+        )).toList(),
+      ),
+    ));
+  }
+
+  Future<void> _batchUpdateCategory(String category, String loc) async {
+    final dao = ref.read(assetDaoProvider);
+    final count = _selectedIds.length;
+    for (final id in _selectedIds) {
+      final item = await dao.getById(id);
+      if (item != null) {
+        await dao.update(item.copyWith(category: category));
+      }
+    }
+    _toggleSelectMode(false);
+    ref.bumpVersion();
+    if (mounted) {
+      AppToast.capsule(context, t('batch.updated', loc).replaceAll('{n}', '$count'), Colors.green);
+    }
+  }
+
+  void _batchArchive(String loc) {
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      title: Text(t('confirm.archiveTitle', loc)),
+      content: Text(t('batch.archiveConfirm', loc).replaceAll('{n}', '${_selectedIds.length}')),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t('confirm.cancel', loc))),
+        TextButton(onPressed: () async {
+          Navigator.pop(ctx);
+          final dao = ref.read(assetDaoProvider);
+          final count = _selectedIds.length;
+          for (final id in _selectedIds) {
+            final item = await dao.getById(id);
+            if (item != null && !item.isArchived) {
+              await dao.update(item.copyWith(isArchived: true));
+            }
+          }
+          _toggleSelectMode(false);
+          ref.bumpVersion();
+          if (mounted) {
+            AppToast.capsule(context, t('batch.archived', loc).replaceAll('{n}', '$count'), Colors.orange);
+          }
+        }, style: TextButton.styleFrom(foregroundColor: Colors.orange), child: Text(t('confirm.archive', loc))),
+      ],
+    ));
+  }
+
+  void _batchDelete(String loc) {
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      title: Text(t('confirm.deleteTitle', loc)),
+      content: Text(t('batch.deleteConfirm', loc).replaceAll('{n}', '${_selectedIds.length}')),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t('confirm.cancel', loc))),
+        TextButton(onPressed: () async {
+          Navigator.pop(ctx);
+          final dao = ref.read(assetDaoProvider);
+          final count = _selectedIds.length;
+          for (final id in _selectedIds) {
+            await dao.softDelete(id);
+          }
+          _toggleSelectMode(false);
+          ref.bumpVersion();
+          if (mounted) {
+            AppToast.capsule(context, t('batch.deleted', loc).replaceAll('{n}', '$count'), Colors.red);
+          }
+        }, style: TextButton.styleFrom(foregroundColor: Colors.red), child: Text(t('confirm.delete', loc))),
+      ],
+    ));
+  }
+
+  void _toggleFavorite(AssetItem item) async {
+    final dao = ref.read(assetDaoProvider);
+    await dao.toggleFavorite(item.id);
+    ref.bumpVersion();
+    if (mounted) {
+      final loc2 = ref.read(localeCodeProvider);
+      AppToast.capsule(
+        context,
+        item.isFavorite ? t('favorite.remove', loc2) : t('favorite.add', loc2),
+        Colors.amber,
+      );
+    }
   }
 
   void _confirmArchive(AssetItem item) {

@@ -119,6 +119,26 @@ class DatabaseManager {
     return _filter(isDeleted: true);
   }
 
+  /// 获取收藏的物品（未归档 + 未删除 + 已收藏）
+  List<AssetItem> getFavorites() {
+    _ensureInitialized();
+    return _items.where((item) =>
+        item.isFavorite && !item.isDeleted && !item.isArchived).toList()..sort(_defaultSort);
+  }
+
+  /// 切换收藏状态
+  Future<void> toggleFavorite(int id) async {
+    _ensureInitialized();
+    final index = _items.indexWhere((e) => e.id == id);
+    if (index >= 0) {
+      _items[index] = _items[index].copyWith(
+        isFavorite: !_items[index].isFavorite,
+        updatedAt: DateTime.now(),
+      );
+      await _save();
+    }
+  }
+
   /// 按 ID 获取
   AssetItem? getById(int id) {
     _ensureInitialized();
