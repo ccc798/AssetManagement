@@ -452,6 +452,8 @@ const Map<String, String> zh = <String, String>{
   'version.downloadComplete': '下载完成',
   'version.downloadTimeout': '下载超时，请稍后重试',
   'version.github': 'GitHub 主页',
+  'version.githubProxy': 'GitHub加速下载',
+  'version.githubProxyDesc': '启用后将使用加速节点下载更新',
 
   'ai.ocrInvoice': '识别发票',
   'ai.ocrWarranty': '识别保修卡',

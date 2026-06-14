@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../../core/i18n/translations.dart';
 import '../../../core/services/app_info_service.dart';
 import '../../../core/services/version_service.dart';
+import '../../providers/settings_provider.dart';
 
 class VersionUpdatePage extends ConsumerStatefulWidget {
   const VersionUpdatePage({super.key});
@@ -69,21 +69,31 @@ class _VersionUpdatePageState extends ConsumerState<VersionUpdatePage> {
     });
 
     try {
-      final dir = await getExternalStorageDirectory();
-      if (dir == null) {
-        throw Exception('无法获取存储目录');
-      }
+      final configAsync = ref.read(configProvider.future);
+      final config = await configAsync;
+      final useProxy = config.githubProxyEnabled;
 
-      final fileName = _downloadUrl!.split('/').last;
-      final savePath = '${dir.path}/$fileName';
+      final result = await VersionService.downloadApkWithProxy(
+        _downloadUrl!,
+        useProxy,
+        (received, total) {
+          if (total != -1) {
+            final progress = ((received / total) * 100).toStringAsFixed(0);
+            setState(() {
+              _downloadProgress = '$progress%';
+            });
+          }
+        },
+      );
 
-      final result = await VersionService.downloadApk(_downloadUrl!, savePath);
       if (result != null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(t('version.downloadComplete', ref.read(localeCodeProvider)))),
           );
         }
+
+        await VersionService.installApk(result);
       } else {
         throw Exception('下载失败');
       }
@@ -165,7 +175,7 @@ class _VersionUpdatePageState extends ConsumerState<VersionUpdatePage> {
           if (_errorMessage != null) ...[
             const SizedBox(height: 16),
             Card(
-              color: Colors.red.withValues(alpha: 0.1),
+              color: const Color.fromARGB(255, 255, 200, 200),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),

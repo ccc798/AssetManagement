@@ -1,5 +1,9 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:asset_management/version.dart';
+import 'github_proxy.dart';
 
 class VersionService {
   static const String _githubApiUrl = 'https://api.github.com/repos/ccc798/AssetManagement/releases/latest';
@@ -43,7 +47,34 @@ class VersionService {
     return 0;
   }
 
-  static Future<String?> downloadApk(String downloadUrl, String savePath) async {
+  static Future<String?> downloadApkWithProxy(
+    String downloadUrl,
+    bool useProxy,
+    void Function(int, int)? onProgress,
+  ) async {
+    final dir = await getExternalStorageDirectory();
+    if (dir == null) return null;
+
+    final fileName = downloadUrl.split('/').last;
+    final savePath = '${dir.path}/$fileName';
+
+    if (useProxy) {
+      final proxyService = GithubProxyService();
+      final sortedProxies = await proxyService.testAndSortProxies();
+      
+      if (sortedProxies.isNotEmpty) {
+        final result = await proxyService.downloadWithProxy(
+          downloadUrl,
+          savePath,
+          sortedProxies,
+          onProgress: onProgress,
+        );
+        if (result != null) {
+          return result;
+        }
+      }
+    }
+
     try {
       final dio = Dio();
       dio.options.connectTimeout = const Duration(seconds: 30);
@@ -52,11 +83,60 @@ class VersionService {
       await dio.download(
         downloadUrl,
         savePath,
+        onReceiveProgress: onProgress,
       );
       return savePath;
     } catch (e) {
       return null;
     }
+  }
+
+  static Future<bool> installApk(String apkPath) async {
+    try {
+      final file = File(apkPath);
+      if (!file.existsSync()) {
+        return false;
+      }
+
+      final uri = Uri.file(apkPath);
+      if (await canLaunchUrlString(uri.toString())) {
+        await launchUrlString(uri.toString(), mode: LaunchMode.externalApplication);
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> cleanupOldApks() async {
+    try {
+      final dir = await getExternalStorageDirectory();
+      if (dir == null) return;
+
+      const currentVersion = AppVersion.version;
+      final files = dir.listSync().where((entity) => 
+        entity is File && entity.path.endsWith('.apk') && entity.path.contains('AssetManagement')
+      ).toList();
+
+      for (final file in files) {
+        final filePath = file.path;
+        final regex = RegExp(r'v(\d+\.\d+\.\d+)');
+        final match = regex.firstMatch(filePath);
+        
+        if (match != null) {
+          final fileVersion = match.group(1)!;
+          if (compareVersions(currentVersion, fileVersion) > 0) {
+            await (file as File).delete();
+          }
+        }
+      }
+    } catch (_) {
+    }
+  }
+
+  static Future<void> cleanupOldApksOnStart() async {
+    await cleanupOldApks();
   }
 }
 

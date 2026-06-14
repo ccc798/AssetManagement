@@ -20,6 +20,7 @@ class BackupConfig {
     this.warrantyReminderDays = 7,
     this.lifetimeReminderDays = 30,
     this.reminderTime = '09:00',
+    this.githubProxyEnabled = true,
   });
 
   final String webdavUrl;
@@ -43,6 +44,9 @@ class BackupConfig {
   final int warrantyReminderDays;
   final int lifetimeReminderDays;
   final String reminderTime;
+  
+  /// GitHub加速下载开关
+  final bool githubProxyEnabled;
 
   static const BackupConfig default_ = BackupConfig();
 
@@ -66,6 +70,7 @@ class BackupConfig {
         'warrantyReminderDays': warrantyReminderDays,
         'lifetimeReminderDays': lifetimeReminderDays,
         'reminderTime': reminderTime,
+        'githubProxyEnabled': githubProxyEnabled,
       };
 
   factory BackupConfig.fromJson(Map<String, dynamic> json) => BackupConfig(
@@ -90,6 +95,7 @@ class BackupConfig {
         warrantyReminderDays: json['warrantyReminderDays'] as int? ?? 7,
         lifetimeReminderDays: json['lifetimeReminderDays'] as int? ?? 30,
         reminderTime: json['reminderTime'] as String? ?? '09:00',
+        githubProxyEnabled: json['githubProxyEnabled'] as bool? ?? true,
       );
 
   BackupConfig copyWith({
@@ -112,6 +118,7 @@ class BackupConfig {
     int? warrantyReminderDays,
     int? lifetimeReminderDays,
     String? reminderTime,
+    bool? githubProxyEnabled,
   }) {
     return BackupConfig(
       webdavUrl: webdavUrl ?? this.webdavUrl,
@@ -133,6 +140,7 @@ class BackupConfig {
       warrantyReminderDays: warrantyReminderDays ?? this.warrantyReminderDays,
       lifetimeReminderDays: lifetimeReminderDays ?? this.lifetimeReminderDays,
       reminderTime: reminderTime ?? this.reminderTime,
+      githubProxyEnabled: githubProxyEnabled ?? this.githubProxyEnabled,
     );
   }
 }

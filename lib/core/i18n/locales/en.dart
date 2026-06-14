@@ -452,6 +452,8 @@ const Map<String, String> en = <String, String>{
   'version.downloadComplete': 'Download complete',
   'version.downloadTimeout': 'Download timed out, please retry later',
   'version.github': 'GitHub Homepage',
+  'version.githubProxy': 'GitHub Proxy',
+  'version.githubProxyDesc': 'Use proxy to speed up download',
 
   'ai.ocrInvoice': 'Scan Invoice',
   'ai.ocrWarranty': 'Scan Warranty',

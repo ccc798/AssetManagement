@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/translations.dart';
 import '../../../core/services/app_info_service.dart';
+import '../../providers/settings_provider.dart';
 import 'ai_settings_page.dart';
 import 'backup_settings_page.dart';
 import 'category_management_page.dart';
@@ -186,6 +187,27 @@ class SettingsPage extends ConsumerWidget {
                     context,
                     MaterialPageRoute(builder: (_) => const VersionUpdatePage()),
                   ),
+                ),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final configAsync = ref.watch(configProvider);
+                    return configAsync.when(
+                      loading: () => const SizedBox(),
+                      error: (_, __) => const SizedBox(),
+                      data: (config) => SwitchListTile(
+                        secondary: const Icon(Icons.network_check),
+                        title: Text(t('version.githubProxy', loc2)),
+                        subtitle: Text(t('version.githubProxyDesc', loc2)),
+                        value: config.githubProxyEnabled,
+                        onChanged: (value) async {
+                          final newConfig = config.copyWith(githubProxyEnabled: value);
+                          await ref.read(configDaoProvider).saveConfig(newConfig);
+                          ref.invalidate(configProvider);
+                        },
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      ),
+                    );
+                  },
                 ),
                 ListTile(
                   leading: const Icon(Icons.code),

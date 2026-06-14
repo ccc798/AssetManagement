@@ -110,6 +110,7 @@ lib/version.dart
 # ── 个人数据文件 ──
 asset_management_data.json
 asset_management_categories.json
+github.txt
 
 # ── 工具脚本 ──
 tools/
