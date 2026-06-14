@@ -105,6 +105,7 @@ migrate_working_dir/
 deploy_github.ps1
 TEST_PLAN.md
 .git_branch.txt
+lib/version.dart
 
 # ── 个人数据文件 ──
 asset_management_data.json

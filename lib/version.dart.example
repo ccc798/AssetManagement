@@ -1,0 +1,6 @@
+class AppVersion {
+  static const String version = '0.0.5';
+  
+  static String get displayVersion => version;
+  static String get fullVersion => version;
+}

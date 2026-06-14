@@ -1,5 +1,5 @@
 # Asset Management Multi-Platform Build Script
-# Version management: reads from pubspec.yaml, auto-increments on build
+# Version management: reads from lib/core/version.dart, auto-increments on build
 # Interactive target selection
 
 param(
@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 $projectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectDir
 
-$pubspecFile = "$projectDir/pubspec.yaml"
+$versionFile = "$projectDir/lib/version.dart"
 
 # -- Platform detection --
 $isWindows = $PSVersionTable.PSVersion.Major -ge 5 -and [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
@@ -152,16 +152,20 @@ function Normalize-Choice {
     return $null
 }
 
-# -- Version management (read from pubspec.yaml) --
+# -- Version management (read from lib/core/version.dart) --
 function Get-CurrentVersion {
-    $pubspec = Get-Content $pubspecFile -Raw
-    if ($pubspec -match 'version:\s*([0-9]+\.[0-9]+\.[0-9]+)') {
+    if (-not (Test-Path $versionFile)) {
+        Write-Error "Version file not found: $versionFile"
+        exit 1
+    }
+    $versionContent = Get-Content $versionFile -Raw
+    if ($versionContent -match "version\s*=\s*'([0-9]+\.[0-9]+\.[0-9]+)'") {
         return $matches[1]
     }
     return "0.0.1"
 }
 
-# -- Bump version in pubspec.yaml (patch +1) --
+# -- Bump version (patch +1) --
 function Bump-Patch {
     param([string]$currentVersion)
     $verParts = $currentVersion -split '\.'
@@ -169,12 +173,12 @@ function Bump-Patch {
     return "$($verParts[0]).$($verParts[1]).$patch"
 }
 
-# -- Update pubspec.yaml version --
-function Update-Pubspec {
+# -- Update version.dart file --
+function Update-VersionFile {
     param([string]$version)
-    $pubspec = Get-Content $pubspecFile -Raw
-    $pubspec = $pubspec -replace '(?m)^version: .+$', "version: $version"
-    Set-Content -Path $pubspecFile -Value $pubspec -Encoding UTF8
+    $versionContent = Get-Content $versionFile -Raw
+    $versionContent = $versionContent -replace "(version\s*=\s*)'[0-9]+\.[0-9]+\.[0-9]+'", "`$1'$version'"
+    Set-Content -Path $versionFile -Value $versionContent -Encoding UTF8
 }
 
 # -- Main --
@@ -272,7 +276,7 @@ function Main {
         }
 
         $newVersion = Bump-Patch $currentVersion
-        Update-Pubspec $newVersion
+        Update-VersionFile $newVersion
         Write-Output ""
         Write-Output "=========================================="
         Write-Output "  Done! v$currentVersion -> v$newVersion (next)"

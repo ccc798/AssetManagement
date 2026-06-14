@@ -30,16 +30,6 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
     _currentItem = widget.item;
   }
 
-  Future<void> _refreshItem() async {
-    final dao = ref.read(assetDaoProvider);
-    final refreshed = await dao.getById(widget.item.id);
-    if (refreshed != null && mounted) {
-      setState(() {
-        _currentItem = refreshed;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final item = _currentItem ?? widget.item;
@@ -85,8 +75,10 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
                 _buildNotesCard(theme, item, loc),
               ],
 
-              const SizedBox(height: 16),
-              _buildRelatedItemsCard(context, ref, theme, loc),
+              if (item.relatedItems.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _buildRelatedItemsCard(context, ref, theme, loc),
+              ],
 
             ],
           ),
@@ -373,7 +365,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
               ),
               _buildCostRow(
                 t('detail.remainingDays', loc),
-                '${endDate.difference(DateTime.now()).inDays}${t('unit.day', loc)}',
+                '${(endDate.difference(DateTime.now()).inDays > 0 ? endDate.difference(DateTime.now()).inDays : 0)}${t('unit.day', loc)}',
                 Icons.hourglass_bottom,
                 Colors.purple,
               ),
@@ -472,20 +464,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            if (item.relatedItems.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: Text(
-                    t('related.empty', loc),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              )
-            else
-              ...item.relatedItems.map((uuid) {
+            ...item.relatedItems.map((uuid) {
                 return FutureBuilder<AssetItem?>(
                   future: ref.read(assetDaoProvider).getByUuid(uuid),
                   builder: (context, snapshot) {
@@ -527,33 +506,31 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
                   },
                 );
               }),
-            if (item.relatedItems.isNotEmpty) ...[
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    t('related.totalValue', loc),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  t('related.totalValue', loc),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  FutureBuilder<double>(
-                    future: _calculateRelatedTotalValue(ref),
-                    builder: (context, snapshot) {
-                      final total = snapshot.data ?? 0.0;
-                      return Text(
-                        MoneyUtils.format(total, locale: loc),
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
+                ),
+                FutureBuilder<double>(
+                  future: _calculateRelatedTotalValue(ref),
+                  builder: (context, snapshot) {
+                    final total = snapshot.data ?? 0.0;
+                    return Text(
+                      MoneyUtils.format(total, locale: loc),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ],
         ),
       ),

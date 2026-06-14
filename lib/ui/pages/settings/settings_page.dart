@@ -5,7 +5,7 @@ import '../../../core/services/app_info_service.dart';
 import 'ai_settings_page.dart';
 import 'backup_settings_page.dart';
 import 'category_management_page.dart';
-import 'export_page.dart';
+import 'data_management_page.dart';
 import 'language_settings_page.dart';
 import 'notification_settings_page.dart';
 import 'theme_settings_page.dart';
@@ -52,14 +52,14 @@ class SettingsPage extends ConsumerWidget {
                   color: Colors.teal.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.file_download, color: Colors.teal),
+                child: const Icon(Icons.storage, color: Colors.teal),
               ),
-              title: Text(t('export.title', loc2)),
-              subtitle: Text(t('settings.exportSub', loc2)),
+              title: Text(t('dataManagement.title', loc2)),
+              subtitle: Text(t('settings.dataManagementSub', loc2)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const ExportPage()),
+                MaterialPageRoute(builder: (_) => const DataManagementPage()),
               ),
             ),
           ),

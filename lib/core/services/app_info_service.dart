@@ -1,4 +1,5 @@
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:asset_management/version.dart';
 
 class AppInfoService {
   AppInfoService._();
@@ -9,13 +10,11 @@ class AppInfoService {
     _packageInfo = await PackageInfo.fromPlatform();
   }
 
-  static String get version => _packageInfo?.version ?? '0.0.0';
-
-  static String get buildNumber => _packageInfo?.buildNumber ?? '0';
+  static String get version => AppVersion.version;
 
   static String get appName => _packageInfo?.appName ?? 'Asset Management';
 
   static String get packageName => _packageInfo?.packageName ?? '';
 
-  static String get fullVersion => '$version ($buildNumber)';
+  static String get fullVersion => AppVersion.fullVersion;
 }
