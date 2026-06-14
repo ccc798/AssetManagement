@@ -452,4 +452,17 @@ const Map<String, String> en = <String, String>{
   'version.downloadComplete': 'Download complete',
   'version.downloadTimeout': 'Download timed out, please retry later',
   'version.github': 'GitHub Homepage',
+
+  'ai.ocrInvoice': 'Scan Invoice',
+  'ai.ocrWarranty': 'Scan Warranty',
+  'ai.suggestCategory': 'Smart Category',
+  'ai.pricePrediction': 'Price Prediction',
+  'ai.recognizing': 'Recognizing...',
+  'ai.confidence': 'Confidence',
+  'ai.reason': 'Reason',
+  'ai.depreciationRate': 'Annual Depreciation',
+  'ai.currentValue': 'Current Value',
+  'ai.futureValue': 'Future Value',
+  'ai.bestSellDate': 'Best Sell Date',
+  'ai.noPrediction': 'No prediction data',
 };

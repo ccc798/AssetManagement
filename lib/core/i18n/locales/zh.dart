@@ -452,4 +452,17 @@ const Map<String, String> zh = <String, String>{
   'version.downloadComplete': '下载完成',
   'version.downloadTimeout': '下载超时，请稍后重试',
   'version.github': 'GitHub 主页',
+
+  'ai.ocrInvoice': '识别发票',
+  'ai.ocrWarranty': '识别保修卡',
+  'ai.suggestCategory': '智能分类建议',
+  'ai.pricePrediction': '价格趋势预测',
+  'ai.recognizing': '识别中...',
+  'ai.confidence': '置信度',
+  'ai.reason': '分类理由',
+  'ai.depreciationRate': '年折旧率',
+  'ai.currentValue': '当前价值',
+  'ai.futureValue': '未来价值',
+  'ai.bestSellDate': '最佳出售日期',
+  'ai.noPrediction': '暂无预测数据',
 };

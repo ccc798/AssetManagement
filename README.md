@@ -191,6 +191,10 @@ asset_management/
 ### 运行 / Run
 
 ```bash
+# 版本管理
+lib\version.dart.example 
+删除.example进行版本管理
+
 # 获取依赖
 flutter pub get
 
