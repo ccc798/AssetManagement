@@ -102,57 +102,57 @@ asset_management/
 │   │   ├── i18n/
 │   │   │   ├── translations.dart          # t() 函数、语言检测、注册表
 │   │   │   └── locales/
-│   │   │       ├── zh.dart                # 中文翻译（305 键）
-│   │   │       └── en.dart                # 英文翻译（305 键）
+│   │   │       ├── zh.dart               # 中文翻译
+│   │   │       └── en.dart               # 英文翻译
 │   │   ├── constants/
-│   │   │   ├── app_constants.dart         # 版本号、预设分类、默认配置
+│   │   │   ├── app_constants.dart        # 版本号、预设分类、默认配置
 │   │   │   └── app_colors.dart            # 调色板 + 颜色解析
 │   │   ├── utils/
 │   │   │   ├── csv_export.dart            # CSV 生成 + 公开目录导出
 │   │   │   ├── date_utils.dart            # 日期格式化
-│   │   │   └── money_utils.dart           # 金额格式化 + 日均类比
+│   │   │   └── money_utils.dart            # 金额格式化 + 日均类比
 │   │   └── theme/
 │   │       ├── app_theme.dart             # 主题工厂（seed → light/dark）
-│   │       └── app_icons.dart             # CustomPainter 矢量图标
+│   │       └── app_icons.dart              # CustomPainter 矢量图标
 │   │
 │   ├── data/
 │   │   ├── models/
-│   │   │   ├── asset_item.dart            # 资产物品模型（含计算属性）
-│   │   │   ├── category.dart              # 分类模型
-│   │   │   └── backup_config.dart         # AI/WebDAV/主题 配置模型
+│   │   │   ├── asset_item.dart             # 资产物品模型（含计算属性）
+│   │   │   ├── category.dart               # 分类模型
+│   │   │   └── backup_config.dart          # AI/WebDAV/主题 配置模型
 │   │   └── database/
-│   │       ├── database_manager.dart      # JSON 文件数据库（单例）
-│   │       ├── config_dao.dart            # 配置读写
-│   │       ├── asset_dao.dart             # 物品数据访问
-│   │       └── category_dao.dart          # 分类数据访问
+│   │       ├── database_manager.dart        # JSON 文件数据库（单例）
+│   │       ├── config_dao.dart              # 配置读写
+│   │       ├── asset_dao.dart               # 物品数据访问
+│   │       └── category_dao.dart            # 分类数据访问
 │   │
 │   ├── services/
-│   │   ├── ai_service.dart                # AI 图片/文字识别 + 数据增强
-│   │   ├── local_backup_service.dart      # 本地备份/恢复
-│   │   └── webdav_service.dart            # WebDAV 备份/恢复
+│   │   ├── ai_service.dart                  # AI 图片/文字识别 + 数据增强
+│   │   ├── local_backup_service.dart        # 本地备份/恢复
+│   │   └── webdav_service.dart              # WebDAV 备份/恢复
 │   │
 │   └── ui/
 │       ├── providers/
-│       │   ├── asset_provider.dart        # 物品列表/统计/版本号 providers
-│       │   ├── category_provider.dart     # 分类 providers
-│       │   ├── theme_provider.dart        # 主题模式 + 配色 providers
-│       │   └── settings_provider.dart     # 配置 providers
+│       │   ├── asset_provider.dart          # 物品列表/统计/版本号 providers
+│       │   ├── category_provider.dart       # 分类 providers
+│       │   ├── theme_provider.dart          # 主题模式 + 配色 providers
+│       │   └── settings_provider.dart        # 配置 providers
 │       ├── widgets/
-│       │   ├── app_toast.dart             # 胶囊 Toast overlay
-│       │   ├── asset_card.dart            # 物品卡片（滑动操作）
-│       │   ├── category_chip.dart         # 分类 chip
-│       │   └── empty_state.dart           # 空状态 + 加载状态
+│       │   ├── app_toast.dart               # 胶囊 Toast overlay
+│       │   ├── asset_card.dart              # 物品卡片（滑动操作）
+│       │   ├── category_chip.dart           # 分类 chip
+│       │   └── empty_state.dart             # 空状态 + 加载状态
 │       └── pages/
 │           ├── home/
-│           │   └── home_page.dart         # 首页：统计栏 + 分类过滤 + 搜索
+│           │   └── home_page.dart            # 首页：统计栏 + 分类过滤 + 搜索
 │           ├── add_item/
-│           │   └── add_item_page.dart     # 添加/编辑（支持 AI 批量）
+│           │   └── add_item_page.dart        # 添加/编辑（支持 AI 批量）
 │           ├── item_detail/
-│           │   └── item_detail_page.dart  # 成本分析 + 生命周期
+│           │   └── item_detail_page.dart     # 成本分析 + 生命周期
 │           ├── statistics/
-│           │   └── statistics_page.dart   # 统计 + 折线图
+│           │   └── statistics_page.dart      # 统计 + 折线图
 │           └── settings/
-│               ├── settings_page.dart     # 设置入口
+│               ├── settings_page.dart        # 设置入口
 │               ├── backup_settings_page.dart
 │               ├── webdav_settings_page.dart
 │               ├── ai_settings_page.dart
@@ -161,20 +161,20 @@ asset_management/
 │               ├── category_management_page.dart
 │               └── language_settings_page.dart
 │
-├── android/
-├── ios/
-├── linux/
-├── macos/
-├── windows/
-├── assets/icons/                          # 应用图标
-├── test/                                  # 测试（.gitignore 排除）
-├── version.txt                            # 版本号（自动管理）
-├── pubspec.yaml                           # 依赖配置
-├── build_all.ps1                          # 交互式多平台构建脚本
-├── deploy_github.ps1                      # GitHub 部署脚本
-├── .gitignore                             # Git 忽略规则
-├── LICENSE                                # GPLv3
-└── README.md
+├── android/                                # Android 平台
+├── ios/                                    # iOS 平台
+├── linux/                                  # Linux 平台
+├── macos/                                  # macOS 平台
+├── windows/                                # Windows 平台
+├── assets/icons/                           # 应用图标
+├── pubspec.yaml                            # 依赖配置
+├── pubspec.lock                            # 依赖版本锁定
+├── analysis_options.yaml                   # Dart 代码分析配置
+├── build_all.ps1                           # 交互式多平台构建脚本
+├── .gitignore                              # Git 忽略规则
+├── .gitattributes                          # Git 行尾符配置
+├── LICENSE                                 # GPLv3
+└── README.md                               # 项目文档
 ```
 
 ***
