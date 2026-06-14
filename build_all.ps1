@@ -1,5 +1,5 @@
 # Asset Management Multi-Platform Build Script
-# Version management: reads from lib/core/version.dart, auto-increments on build
+# Version management: reads from lib/version.dart, auto-increments on build
 # Interactive target selection
 
 param(
@@ -11,6 +11,7 @@ $projectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectDir
 
 $versionFile = "$projectDir/lib/version.dart"
+$androidBuildGradle = "$projectDir/android/app/build.gradle.kts"
 
 # -- Platform detection --
 $isWindows = $PSVersionTable.PSVersion.Major -ge 5 -and [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
@@ -45,6 +46,10 @@ $flutterBin = if ($isWindows) { "$flutterDir/bin/flutter.bat" } else { "$flutter
 
 # -- Build functions --
 function Build-Android {
+    param([string]$version)
+    Write-Output ""
+    Write-Output "=== Syncing Android version to $version ==="
+    Sync-AndroidVersion $version
     Write-Output ""
     Write-Output "=== Building Android APK ==="
     & $flutterBin build apk --release --android-skip-build-dependency-validation
@@ -152,7 +157,7 @@ function Normalize-Choice {
     return $null
 }
 
-# -- Version management (read from lib/core/version.dart) --
+# -- Version management (read from lib/version.dart) --
 function Get-CurrentVersion {
     if (-not (Test-Path $versionFile)) {
         Write-Error "Version file not found: $versionFile"
@@ -179,6 +184,21 @@ function Update-VersionFile {
     $versionContent = Get-Content $versionFile -Raw
     $versionContent = $versionContent -replace "(version\s*=\s*)'[0-9]+\.[0-9]+\.[0-9]+'", "`$1'$version'"
     Set-Content -Path $versionFile -Value $versionContent -Encoding UTF8
+}
+
+# -- Sync Android version to build.gradle.kts --
+function Sync-AndroidVersion {
+    param([string]$version)
+    if (-not (Test-Path $androidBuildGradle)) {
+        Write-Error "Android build.gradle.kts not found: $androidBuildGradle"
+        return
+    }
+    $gradleContent = Get-Content $androidBuildGradle -Raw
+    $pattern = [regex]::new('(versionName\s*=\s*")[^"]+(")')
+    $replacement = '${1}' + $version + '${2}'
+    $gradleContent = $pattern.Replace($gradleContent, $replacement)
+    Set-Content -Path $androidBuildGradle -Value $gradleContent -Encoding UTF8
+    Write-Output "[OK] Android versionName synced to $version"
 }
 
 # -- Main --
@@ -211,7 +231,7 @@ function Main {
     try {
         switch ($choice) {
             "1" {
-                Build-Android
+                Build-Android $currentVersion
                 Package-Android $currentVersion
             }
             "2" {
@@ -220,7 +240,7 @@ function Main {
                 elseif ($isMacOS) { Build-MacOS; Package-MacOS $currentVersion }
             }
             "3" {
-                Build-Android; Package-Android $currentVersion
+                Build-Android $currentVersion; Package-Android $currentVersion
                 if ($isWindows) { Build-Windows; Package-Windows $currentVersion }
                 elseif ($isLinux) { Build-Linux; Package-Linux $currentVersion }
                 elseif ($isMacOS) { Build-MacOS; Package-MacOS $currentVersion }
@@ -235,7 +255,7 @@ function Main {
             }
             "5" {
                 if (-not $isMacOS) { throw "iOS builds are only supported on macOS" }
-                Build-Android; Package-Android $currentVersion
+                Build-Android $currentVersion; Package-Android $currentVersion
                 Write-Output ""
                 Write-Output "=== Building iOS ==="
                 & $flutterBin build ios --release --no-codesign
@@ -244,7 +264,7 @@ function Main {
             }
             "6" {
                 if (-not $isMacOS) { throw "iOS/macOS builds are only supported on macOS" }
-                Build-Android; Package-Android $currentVersion
+                Build-Android $currentVersion; Package-Android $currentVersion
                 Write-Output ""
                 Write-Output "=== Building iOS ==="
                 & $flutterBin build ios --release --no-codesign
@@ -257,13 +277,13 @@ function Main {
                 exit 0
             }
             "all" {
-                Build-Android; Package-Android $currentVersion
+                Build-Android $currentVersion; Package-Android $currentVersion
                 if ($isWindows) { Build-Windows; Package-Windows $currentVersion }
                 elseif ($isLinux) { Build-Linux; Package-Linux $currentVersion }
                 elseif ($isMacOS) { Build-MacOS; Package-MacOS $currentVersion }
             }
             "android" {
-                Build-Android; Package-Android $currentVersion
+                Build-Android $currentVersion; Package-Android $currentVersion
             }
             "desktop" {
                 if ($isWindows) { Build-Windows; Package-Windows $currentVersion }
