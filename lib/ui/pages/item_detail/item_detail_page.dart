@@ -12,65 +12,92 @@ import '../../widgets/app_toast.dart';
 import '../image_viewer/image_viewer_page.dart';
 
 /// 物品详情页
-class ItemDetailPage extends ConsumerWidget {
+class ItemDetailPage extends ConsumerStatefulWidget {
   final AssetItem item;
 
   const ItemDetailPage({super.key, required this.item});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final loc = ref.read(localeCodeProvider);
-    final days = item.daysUsed;
-    final cost = item.dailyCost;
-    final remainingRatio = item.remainingValueRatio;
-    final endDate = item.estimatedEndDate;
+  ConsumerState<ItemDetailPage> createState() => _ItemDetailPageState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(item.name),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.archive_outlined),
-            onPressed: () => _confirmArchive(context, ref, loc),
+class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
+  AssetItem? _currentItem;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentItem = widget.item;
+  }
+
+  Future<void> _refreshItem() async {
+    final dao = ref.read(assetDaoProvider);
+    final refreshed = await dao.getById(widget.item.id);
+    if (refreshed != null && mounted) {
+      setState(() {
+        _currentItem = refreshed;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = _currentItem ?? widget.item;
+    
+    return Consumer(
+      builder: (context, ref, child) {
+        final theme = Theme.of(context);
+        final loc = ref.read(localeCodeProvider);
+        final days = item.daysUsed;
+        final cost = item.dailyCost;
+        final remainingRatio = item.remainingValueRatio;
+        final endDate = item.estimatedEndDate;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(item.name),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.archive_outlined),
+                onPressed: () => _confirmArchive(context, ref, item, loc),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // 头部信息卡
-          _buildHeaderCard(theme, days, cost, remainingRatio, loc),
-          const SizedBox(height: 16),
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildHeaderCard(theme, item, days, cost, remainingRatio, loc),
+              const SizedBox(height: 16),
 
-          // 图片画廊
-          if (item.images.isNotEmpty) ...[
-            _buildImagesCard(context, theme, loc),
-            const SizedBox(height: 16),
-          ],
+              if (item.images.isNotEmpty) ...[
+                _buildImagesCard(context, theme, item, loc),
+                const SizedBox(height: 16),
+              ],
 
-          // 详情卡片
-          _buildDetailCard(theme, loc),
-          const SizedBox(height: 16),
+              _buildDetailCard(theme, item, loc),
+              const SizedBox(height: 16),
 
-          // 价值分析卡片
-          _buildValueAnalysisCard(theme, days, cost, endDate, loc),
-          const SizedBox(height: 16),
+              _buildValueAnalysisCard(theme, item, days, cost, endDate, loc),
+              const SizedBox(height: 16),
 
-          // 备注
-          if (item.notes.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _buildNotesCard(theme, loc),
-          ],
+              if (item.notes.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _buildNotesCard(theme, item, loc),
+              ],
 
-        ],
-      ),
+              const SizedBox(height: 16),
+              _buildRelatedItemsCard(context, ref, theme, loc),
+
+            ],
+          ),
+        );
+      },
     );
   }
 
-  /// 头部信息卡 — 含自定义矢量环
   Widget _buildHeaderCard(
     ThemeData theme,
+    AssetItem item,
     int days,
     double cost,
     double remainingRatio,
@@ -81,7 +108,6 @@ class ItemDetailPage extends ConsumerWidget {
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            // 分类图标
             Container(
               width: 64,
               height: 64,
@@ -134,7 +160,6 @@ class ItemDetailPage extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      // 剩余价值指示器
                       _buildValueIndicator(theme, remainingRatio, loc),
                     ],
                   ),
@@ -169,7 +194,7 @@ class ItemDetailPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildImagesCard(BuildContext context, ThemeData theme, String loc) {
+  Widget _buildImagesCard(BuildContext context, ThemeData theme, AssetItem item, String loc) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -214,8 +239,7 @@ class ItemDetailPage extends ConsumerWidget {
     );
   }
 
-  /// 详细信息卡片
-  Widget _buildDetailCard(ThemeData theme, String loc) {
+  Widget _buildDetailCard(ThemeData theme, AssetItem item, String loc) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -294,9 +318,9 @@ class ItemDetailPage extends ConsumerWidget {
     );
   }
 
-  /// 价值分析卡片
   Widget _buildValueAnalysisCard(
     ThemeData theme,
+    AssetItem item,
     int days,
     double cost,
     DateTime? endDate,
@@ -355,7 +379,6 @@ class ItemDetailPage extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: 16),
-            // 进度条
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
@@ -413,8 +436,7 @@ class ItemDetailPage extends ConsumerWidget {
     );
   }
 
-  /// 备注卡片
-  Widget _buildNotesCard(ThemeData theme, String loc) {
+  Widget _buildNotesCard(ThemeData theme, AssetItem item, String loc) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -435,7 +457,122 @@ class ItemDetailPage extends ConsumerWidget {
     );
   }
 
-  void _confirmArchive(BuildContext context, WidgetRef ref, String loc) {
+  Widget _buildRelatedItemsCard(BuildContext context, WidgetRef ref, ThemeData theme, String loc) {
+    final item = _currentItem ?? widget.item;
+    
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              t('related.title', loc),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (item.relatedItems.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: Text(
+                    t('related.empty', loc),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...item.relatedItems.map((uuid) {
+                return FutureBuilder<AssetItem?>(
+                  future: ref.read(assetDaoProvider).getByUuid(uuid),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData || snapshot.data == null) {
+                      return const SizedBox.shrink();
+                    }
+                    final relatedItem = snapshot.data!;
+                    return ListTile(
+                      key: Key(uuid),
+                      contentPadding: EdgeInsets.zero,
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          AppIcons.getIcon(_getCategoryIcon(relatedItem.category)),
+                          color: theme.colorScheme.primary,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(relatedItem.name),
+                      subtitle: Text(
+                        MoneyUtils.format(relatedItem.price, locale: loc),
+                        style: TextStyle(color: theme.colorScheme.primary),
+                      ),
+                      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ItemDetailPage(item: relatedItem),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              }),
+            if (item.relatedItems.isNotEmpty) ...[
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    t('related.totalValue', loc),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  FutureBuilder<double>(
+                    future: _calculateRelatedTotalValue(ref),
+                    builder: (context, snapshot) {
+                      final total = snapshot.data ?? 0.0;
+                      return Text(
+                        MoneyUtils.format(total, locale: loc),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<double> _calculateRelatedTotalValue(WidgetRef ref) async {
+    final item = _currentItem ?? widget.item;
+    double total = 0.0;
+    for (final uuid in item.relatedItems) {
+      final relatedItem = await ref.read(assetDaoProvider).getByUuid(uuid);
+      if (relatedItem != null) {
+        total += relatedItem.price;
+      }
+    }
+    return total;
+  }
+
+  void _confirmArchive(BuildContext context, WidgetRef ref, AssetItem item, String loc) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

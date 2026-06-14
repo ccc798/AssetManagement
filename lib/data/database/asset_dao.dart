@@ -25,6 +25,11 @@ class AssetDao {
     return _db.getById(id);
   }
 
+  Future<AssetItem?> getByUuid(String uuid) async {
+    await _db.init();
+    return _db.getByUuid(uuid);
+  }
+
   Future<List<AssetItem>> search(String keyword) async {
     await _db.init();
     return _db.search(keyword);

@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/i18n/translations.dart';
 import '../../../core/services/image_service.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/utils/money_utils.dart';
 import '../../../data/database/asset_dao.dart';
 import '../../../data/models/asset_item.dart';
 import '../../../services/ai_service.dart';
@@ -35,6 +38,8 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
 
   List<String> _images = [];
   final ImageService _imageService = ImageService.instance;
+
+  List<String> _relatedItems = [];
 
   List<Map<String, dynamic>> _pendingItems = [];
   int _currentItemIndex = 0;
@@ -70,6 +75,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
     _plannedLifetimeDays = item.plannedLifetimeDays;
     _rating = item.rating;
     _images = List.from(item.images);
+    _relatedItems = List.from(item.relatedItems);
     if (item.screenshotPath.isNotEmpty) {
       _screenshotFile = File(item.screenshotPath);
     }
@@ -148,6 +154,8 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
             ),
             const SizedBox(height: 16),
             _buildImageSection(theme),
+            const SizedBox(height: 16),
+            _buildRelatedItemsCard(context, theme),
             const SizedBox(height: 32),
             _buildSubmitButton(theme),
             if (_pendingItems.length > 1) ...[
@@ -311,6 +319,208 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
         ),
       ],
     );
+  }
+
+  Widget _buildRelatedItemsCard(BuildContext context, ThemeData theme) {
+    final loc = ref.read(localeCodeProvider);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  t('related.title', loc),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () => _showRelatedItemsDialog(context),
+                ),
+              ],
+            ),
+            if (_relatedItems.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: Text(
+                    t('related.empty', loc),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ..._relatedItems.map((uuid) {
+                return FutureBuilder<AssetItem?>(
+                  future: ref.read(assetDaoProvider).getByUuid(uuid),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData || snapshot.data == null) {
+                      return const SizedBox.shrink();
+                    }
+                    final relatedItem = snapshot.data!;
+                    return ListTile(
+                      key: Key(uuid),
+                      contentPadding: EdgeInsets.zero,
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          AppIcons.getIcon(_getCategoryIcon(relatedItem.category)),
+                          color: theme.colorScheme.primary,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(relatedItem.name),
+                      subtitle: Text(
+                        MoneyUtils.format(relatedItem.price, locale: loc),
+                        style: TextStyle(color: theme.colorScheme.primary),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.remove_circle, color: Colors.orange),
+                        onPressed: () {
+                          setState(() {
+                            _relatedItems.remove(uuid);
+                          });
+                        },
+                      ),
+                    );
+                  },
+                );
+              }),
+            if (_relatedItems.isNotEmpty) ...[
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    t('related.totalValue', loc),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  FutureBuilder<double>(
+                    future: _calculateRelatedTotalValue(),
+                    builder: (context, snapshot) {
+                      final total = snapshot.data ?? 0.0;
+                      return Text(
+                        MoneyUtils.format(total, locale: loc),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<double> _calculateRelatedTotalValue() async {
+    double total = 0.0;
+    for (final uuid in _relatedItems) {
+      final relatedItem = await ref.read(assetDaoProvider).getByUuid(uuid);
+      if (relatedItem != null) {
+        total += relatedItem.price;
+      }
+    }
+    return total;
+  }
+
+  void _showRelatedItemsDialog(BuildContext context) async {
+    final allItems = await ref.read(assetListProvider.future);
+    final currentItemId = widget.editItem?.id ?? 0;
+    final availableItems = allItems.where((i) =>
+      i.id != currentItemId &&
+      !i.isArchived &&
+      !i.isDeleted
+    ).toList();
+
+    if (!context.mounted) return;
+
+    final dialogTheme = Theme.of(context);
+    final loc = ref.read(localeCodeProvider);
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: Text(t('related.selectTitle', loc)),
+          contentPadding: EdgeInsets.zero,
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: availableItems.isEmpty
+                ? Center(child: Text(t('related.noMore', loc)))
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: availableItems.length,
+                    itemBuilder: (ctx, index) {
+                      final relatedItem = availableItems[index];
+                      final isSelected = _relatedItems.contains(relatedItem.uuid);
+                      return ListTile(
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: dialogTheme.colorScheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            AppIcons.getIcon(_getCategoryIcon(relatedItem.category)),
+                            color: dialogTheme.colorScheme.primary,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(relatedItem.name),
+                        subtitle: Text(
+                          t(AppConstants.getCategoryNameKey(relatedItem.category), loc),
+                        ),
+                        trailing: IconButton(
+                          icon: isSelected 
+                              ? const Icon(Icons.remove_circle, color: Colors.orange)
+                              : const Icon(Icons.add_circle, color: Colors.green),
+                          onPressed: () {
+                            setState(() {
+                              if (isSelected) {
+                                _relatedItems.remove(relatedItem.uuid);
+                              } else {
+                                _relatedItems.add(relatedItem.uuid);
+                              }
+                            });
+                            if (mounted) {
+                              this.setState(() {});
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getCategoryIcon(String category) {
+    return AppConstants.getCategoryIconName(category);
   }
 
   Future<void> _pickImages() async {
@@ -499,6 +709,13 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
   Future<void> _updateItem(AssetDao dao, double price) async {
     final wp = _warrantyPeriod.trim();
     final ins = _insuranceInfo.trim();
+
+    final oldRelatedItems = widget.editItem!.relatedItems;
+    final newRelatedItems = _relatedItems;
+
+    final addedItems = newRelatedItems.where((uuid) => !oldRelatedItems.contains(uuid)).toList();
+    final removedItems = oldRelatedItems.where((uuid) => !newRelatedItems.contains(uuid)).toList();
+
     final updated = widget.editItem!.copyWith(
       name: _nameController.text.trim(),
       brand: _brandController.text.trim(),
@@ -510,11 +727,61 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       rating: _rating,
       screenshotPath: _screenshotFile?.path ?? widget.editItem!.screenshotPath,
       images: _images,
+      relatedItems: _relatedItems,
       warrantyPeriod: wp.isNotEmpty ? wp : null,
       warrantyExpiry: _warrantyExpiry,
       insuranceInfo: ins.isNotEmpty ? ins : null,
     );
     await dao.update(updated);
+
+    for (final uuid in addedItems) {
+      final targetItem = await dao.getByUuid(uuid);
+      if (targetItem != null) {
+        final targetRelatedItems = List<String>.from(targetItem.relatedItems)..add(widget.editItem!.uuid);
+        await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
+
+        for (final existingUuid in _relatedItems) {
+          if (existingUuid != uuid && existingUuid != widget.editItem!.uuid) {
+            final existingItem = await dao.getByUuid(existingUuid);
+            if (existingItem != null) {
+              if (!existingItem.relatedItems.contains(uuid)) {
+                final existingRelatedItems = List<String>.from(existingItem.relatedItems)..add(uuid);
+                await dao.update(existingItem.copyWith(relatedItems: existingRelatedItems));
+              }
+              if (!targetRelatedItems.contains(existingUuid)) {
+                targetRelatedItems.add(existingUuid);
+                await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
+              }
+            }
+          }
+        }
+      }
+    }
+
+    for (final uuid in removedItems) {
+      final targetItem = await dao.getByUuid(uuid);
+      if (targetItem != null) {
+        final targetRelatedItems = List<String>.from(targetItem.relatedItems)..remove(widget.editItem!.uuid);
+        await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
+
+        for (final existingUuid in _relatedItems) {
+          if (existingUuid != uuid && existingUuid != widget.editItem!.uuid) {
+            final existingItem = await dao.getByUuid(existingUuid);
+            if (existingItem != null) {
+              if (existingItem.relatedItems.contains(uuid)) {
+                final existingRelatedItems = List<String>.from(existingItem.relatedItems)..remove(uuid);
+                await dao.update(existingItem.copyWith(relatedItems: existingRelatedItems));
+              }
+              if (targetRelatedItems.contains(existingUuid)) {
+                targetRelatedItems.remove(existingUuid);
+                await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
+              }
+            }
+          }
+        }
+      }
+    }
+
     if (mounted) {
       AppToast.capsule(context, t('toast.updated', ref.read(localeCodeProvider)), Colors.green);
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -537,6 +804,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       rating: _rating,
       screenshotPath: _screenshotFile?.path ?? '',
       images: _images,
+      relatedItems: _relatedItems,
       aiRawData: _pendingItems.length > 1 
           ? t('add.aiRawDataMultiple', ref.read(localeCodeProvider))
               .replaceAll('{n}', '${_pendingItems.length}')
@@ -546,7 +814,28 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       warrantyExpiry: _warrantyExpiry,
       insuranceInfo: ins.isNotEmpty ? ins : null,
     );
-    await dao.add(item);
+    final saved = await dao.add(item);
+
+    for (final uuid in _relatedItems) {
+      final targetItem = await dao.getByUuid(uuid);
+      if (targetItem != null) {
+        final targetRelatedItems = List<String>.from(targetItem.relatedItems)..add(saved.uuid);
+        await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
+
+        for (final otherUuid in _relatedItems) {
+          if (otherUuid != uuid && !targetRelatedItems.contains(otherUuid)) {
+            final otherItem = await dao.getByUuid(otherUuid);
+            if (otherItem != null) {
+              final otherRelatedItems = List<String>.from(otherItem.relatedItems)..add(uuid);
+              await dao.update(otherItem.copyWith(relatedItems: otherRelatedItems));
+              targetRelatedItems.add(otherUuid);
+              await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
+            }
+          }
+        }
+      }
+    }
+
     if (mounted) {
       AppToast.capsule(context, t('toast.addedN', ref.read(localeCodeProvider))
           .replaceAll('{i}', '${_currentItemIndex + 1}')
@@ -569,12 +858,34 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       rating: _rating,
       screenshotPath: _screenshotFile?.path ?? '',
       images: _images,
+      relatedItems: _relatedItems,
       aiRawData: _aiResult != null ? _aiResult.toString() : '',
       warrantyPeriod: wp.isNotEmpty ? wp : null,
       warrantyExpiry: _warrantyExpiry,
       insuranceInfo: ins.isNotEmpty ? ins : null,
     );
     final saved = await dao.add(item);
+
+    for (final uuid in _relatedItems) {
+      final targetItem = await dao.getByUuid(uuid);
+      if (targetItem != null) {
+        final targetRelatedItems = List<String>.from(targetItem.relatedItems)..add(saved.uuid);
+        await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
+
+        for (final otherUuid in _relatedItems) {
+          if (otherUuid != uuid && !targetRelatedItems.contains(otherUuid)) {
+            final otherItem = await dao.getByUuid(otherUuid);
+            if (otherItem != null) {
+              final otherRelatedItems = List<String>.from(otherItem.relatedItems)..add(uuid);
+              await dao.update(otherItem.copyWith(relatedItems: otherRelatedItems));
+              targetRelatedItems.add(otherUuid);
+              await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
+            }
+          }
+        }
+      }
+    }
+
     _tryEnrich(saved);
     if (mounted) {
       AppToast.capsule(context, t('toast.added', ref.read(localeCodeProvider)), Colors.green);

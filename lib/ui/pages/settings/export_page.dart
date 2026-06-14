@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/translations.dart';
 import '../../../core/utils/csv_export.dart';
+import '../../../data/database/database_manager.dart';
+import '../../../services/local_backup_service.dart';
 import '../../providers/asset_provider.dart';
 import '../../widgets/app_toast.dart';
 
@@ -94,6 +96,27 @@ class _ExportPageState extends ConsumerState<ExportPage> {
               ),
             ),
 
+            const SizedBox(height: 16),
+
+            // 图片导出说明
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(Icons.photo_library, color: Colors.orange, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        t('export.imageExportDesc', loc2),
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             const Spacer(),
 
             // 导出按钮
@@ -111,6 +134,28 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                 label: Text(_isExporting ? t('export.exporting', loc2) : t('export.button', loc2)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // 图片导出按钮
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: _isExporting ? null : _doExportImages,
+                icon: _isExporting
+                    ? const SizedBox(
+                        width: 20, height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.image),
+                label: Text(_isExporting ? t('export.exporting', loc2) : t('export.images', loc2)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,
                   textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
@@ -160,6 +205,34 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         final path = await CsvExporter.exportToDownloads(items, locale: loc);
         final fileName = path.split(Platform.pathSeparator).last;
         if (mounted) AppToast.capsule(context, t('export.toDownloads', ref.read(localeCodeProvider)).replaceAll('{name}', fileName), Colors.green);
+      }
+    } catch (e) {
+      if (mounted) AppToast.capsule(context, '${t('export.failed', ref.read(localeCodeProvider))}: $e', Colors.red);
+    }
+
+    if (mounted) setState(() => _isExporting = false);
+  }
+
+  Future<void> _doExportImages() async {
+    setState(() => _isExporting = true);
+
+    try {
+      final dao = ref.read(assetDaoProvider);
+      final items = await dao.getAll();
+
+      if (items.isEmpty) {
+        if (mounted) AppToast.capsule(context, t('export.noData', ref.read(localeCodeProvider)), Colors.orange);
+        setState(() => _isExporting = false);
+        return;
+      }
+
+      final count = await LocalBackupService.exportImagesToDownloads(items);
+      if (mounted) {
+        if (count > 0) {
+          AppToast.capsule(context, t('export.imagesExported', ref.read(localeCodeProvider)).replaceAll('{n}', '$count'), Colors.green);
+        } else {
+          AppToast.capsule(context, t('export.noImages', ref.read(localeCodeProvider)), Colors.orange);
+        }
       }
     } catch (e) {
       if (mounted) AppToast.capsule(context, '${t('export.failed', ref.read(localeCodeProvider))}: $e', Colors.red);

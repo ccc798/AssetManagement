@@ -46,6 +46,44 @@ class LocalBackupService {
     return targetFile.path;
   }
 
+  static Future<int> exportImagesToDownloads(List<AssetItem> items) async {
+    if (items.isEmpty) return 0;
+
+    final targetDir = await getPublicDownloadsPath();
+    final imagesDir = Directory('$targetDir/AssetManagement_Images');
+    
+    if (!await imagesDir.exists()) {
+      await imagesDir.create(recursive: true);
+    }
+
+    int exportedCount = 0;
+
+    for (final item in items) {
+      if (item.images.isEmpty) continue;
+
+      for (int i = 0; i < item.images.length; i++) {
+        final sourcePath = item.images[i];
+        final sourceFile = File(sourcePath);
+        
+        if (!await sourceFile.exists()) continue;
+
+        final n = (i + 1).toString().padLeft(2, '0');
+        final sanitizedName = item.name.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+        final fileName = '${item.uuid}_${sanitizedName}_$n.jpg';
+        final targetPath = '${imagesDir.path}/$fileName';
+
+        try {
+          await sourceFile.copy(targetPath);
+          exportedCount++;
+        } catch (_) {
+          continue;
+        }
+      }
+    }
+
+    return exportedCount;
+  }
+
   static Future<List<AssetItem>> restoreFromFile(String filePath) async {
     final file = File(filePath);
 

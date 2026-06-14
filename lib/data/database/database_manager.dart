@@ -145,6 +145,12 @@ class DatabaseManager {
     return _items.firstWhereOrNull((item) => item.id == id);
   }
 
+  /// 按 UUID 获取
+  AssetItem? getByUuid(String uuid) {
+    _ensureInitialized();
+    return _items.firstWhereOrNull((item) => item.uuid == uuid);
+  }
+
   /// 搜索
   List<AssetItem> search(String keyword) {
     _ensureInitialized();
