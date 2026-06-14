@@ -9,6 +9,7 @@ import 'data_management_page.dart';
 import 'language_settings_page.dart';
 import 'notification_settings_page.dart';
 import 'theme_settings_page.dart';
+import 'version_update_page.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -180,6 +181,11 @@ class SettingsPage extends ConsumerWidget {
                   title: const Text('Asset Management'),
                   subtitle: Text(AppInfoService.version),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const VersionUpdatePage()),
+                  ),
                 ),
                 ListTile(
                   leading: const Icon(Icons.code),

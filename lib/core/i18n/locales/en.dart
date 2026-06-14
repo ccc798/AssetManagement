@@ -439,4 +439,17 @@ const Map<String, String> en = <String, String>{
   'import.dateInvalid': 'Date format should be yyyy-MM-dd',
   'import.lifetimeInvalid': 'Planned lifetime must be a positive integer',
   'import.ratingInvalid': 'Rating must be an integer between 0-5',
+
+  'version.title': 'Version Update',
+  'version.currentVersion': 'Current Version',
+  'version.latestVersion': 'Latest Version',
+  'version.checkUpdate': 'Check for Updates',
+  'version.checking': 'Checking...',
+  'version.checkFailed': 'Check failed, please check network connection',
+  'version.latest': 'Already the latest version',
+  'version.download': 'Download Update',
+  'version.downloading': 'Downloading...',
+  'version.downloadComplete': 'Download complete',
+  'version.downloadTimeout': 'Download timed out, please retry later',
+  'version.github': 'GitHub Homepage',
 };

@@ -439,4 +439,17 @@ const Map<String, String> zh = <String, String>{
   'import.dateInvalid': '日期格式应为 yyyy-MM-dd',
   'import.lifetimeInvalid': '计划期限必须是正整数',
   'import.ratingInvalid': '评分必须是0-5的整数',
+
+  'version.title': '版本更新',
+  'version.currentVersion': '当前版本',
+  'version.latestVersion': '最新版本',
+  'version.checkUpdate': '检查更新',
+  'version.checking': '检查中...',
+  'version.checkFailed': '检查失败，请检查网络连接',
+  'version.latest': '已是最新版本',
+  'version.download': '下载更新',
+  'version.downloading': '下载中...',
+  'version.downloadComplete': '下载完成',
+  'version.downloadTimeout': '下载超时，请稍后重试',
+  'version.github': 'GitHub 主页',
 };
