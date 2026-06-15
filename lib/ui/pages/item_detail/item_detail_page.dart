@@ -6,10 +6,14 @@ import '../../../core/services/image_service.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/money_utils.dart';
+import '../../../data/database/asset_dao.dart';
+import '../../../data/database/related_pool_dao.dart';
 import '../../../data/models/asset_item.dart';
+import '../../../data/models/related_pool.dart';
 import '../../providers/asset_provider.dart';
 import '../../widgets/app_toast.dart';
 import '../image_viewer/image_viewer_page.dart';
+import '../related_pool/related_pool_detail_page.dart';
 
 /// 物品详情页
 class ItemDetailPage extends ConsumerStatefulWidget {
@@ -23,11 +27,20 @@ class ItemDetailPage extends ConsumerStatefulWidget {
 
 class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
   AssetItem? _currentItem;
+  List<RelatedPool> _relatedPools = [];
 
   @override
   void initState() {
     super.initState();
     _currentItem = widget.item;
+    _loadRelatedPools();
+  }
+
+  Future<void> _loadRelatedPools() async {
+    final pools = await RelatedPoolDao.instance.getByItemUuid(widget.item.uuid);
+    setState(() {
+      _relatedPools = pools;
+    });
   }
 
   @override
@@ -78,6 +91,11 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
               if (item.relatedItems.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _buildRelatedItemsCard(context, ref, theme, loc),
+              ],
+
+              if (_relatedPools.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _buildRelatedPoolsCard(context, theme, loc),
               ],
 
             ],
@@ -464,7 +482,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            ...item.relatedItems.map((uuid) {
+            ...item.relatedPool.where((uuid) => uuid != item.uuid).map((uuid) {
                 return FutureBuilder<AssetItem?>(
                   future: ref.read(assetDaoProvider).getByUuid(uuid),
                   builder: (context, snapshot) {
@@ -540,13 +558,82 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
   Future<double> _calculateRelatedTotalValue(WidgetRef ref) async {
     final item = _currentItem ?? widget.item;
     double total = 0.0;
-    for (final uuid in item.relatedItems) {
+    for (final uuid in item.relatedPool.where((u) => u != item.uuid)) {
       final relatedItem = await ref.read(assetDaoProvider).getByUuid(uuid);
       if (relatedItem != null) {
         total += relatedItem.price;
       }
     }
     return total;
+  }
+
+  Widget _buildRelatedPoolsCard(BuildContext context, ThemeData theme, String loc) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              t('relatedPool.title', loc),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ..._relatedPools.map((pool) {
+              return FutureBuilder<List<AssetItem>>(
+                future: _getPoolItems(pool),
+                builder: (context, snapshot) {
+                  final items = snapshot.data ?? [];
+                  final count = items.length;
+                  final totalPrice = items.fold(0.0, (sum, item) => sum + item.price);
+                  return ListTile(
+                    key: Key(pool.uuid),
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.group, color: Colors.blue, size: 20),
+                    ),
+                    title: Text(pool.name),
+                    subtitle: Text(
+                      '${t('relatedPool.itemCount', loc)}: $count | ${t('relatedPool.totalPrice', loc)}: ${MoneyUtils.format(totalPrice, locale: loc)}',
+                      style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => RelatedPoolDetailPage(
+                            pool: pool,
+                            currentItemUuid: widget.item.uuid,
+                            isReadOnly: true,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<List<AssetItem>> _getPoolItems(RelatedPool pool) async {
+    final dao = AssetDao.instance;
+    final items = await Future.wait(
+      pool.itemUuids.map((uuid) => dao.getByUuid(uuid)),
+    );
+    return items.whereType<AssetItem>().toList();
   }
 
   void _confirmArchive(BuildContext context, WidgetRef ref, AssetItem item, String loc) {

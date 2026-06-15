@@ -3,6 +3,9 @@ import 'database_manager.dart';
 
 /// 资产物品数据访问
 class AssetDao {
+  static final AssetDao instance = AssetDao._();
+  AssetDao._();
+  
   final DatabaseManager _db = DatabaseManager.instance;
 
   Future<List<AssetItem>> getAll({bool includeDeleted = false}) async {

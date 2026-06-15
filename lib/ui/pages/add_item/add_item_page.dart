@@ -4,14 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/i18n/translations.dart';
 import '../../../core/services/image_service.dart';
-import '../../../core/theme/app_icons.dart';
+
 import '../../../core/utils/money_utils.dart';
 import '../../../data/database/asset_dao.dart';
+import '../../../data/database/related_pool_dao.dart';
 import '../../../data/models/asset_item.dart';
+import '../../../data/models/related_pool.dart';
 import '../../../services/ai_service.dart';
 import '../../providers/asset_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../widgets/app_toast.dart';
+import '../related_pool/related_pool_detail_page.dart';
 import 'ai_recognizer.dart';
 import 'widgets/index.dart';
 
@@ -39,7 +42,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
   List<String> _images = [];
   final ImageService _imageService = ImageService.instance;
 
-  List<String> _relatedItems = [];
+  List<RelatedPool> _relatedPools = [];
 
   List<Map<String, dynamic>> _pendingItems = [];
   int _currentItemIndex = 0;
@@ -63,7 +66,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
     }
   }
 
-  void _initEditMode() {
+  void _initEditMode() async {
     _isEditing = true;
     final item = widget.editItem!;
     _nameController.text = item.name;
@@ -75,13 +78,14 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
     _plannedLifetimeDays = item.plannedLifetimeDays;
     _rating = item.rating;
     _images = List.from(item.images);
-    _relatedItems = List.from(item.relatedItems);
+    _relatedPools = await RelatedPoolDao.instance.getByItemUuid(item.uuid);
     if (item.screenshotPath.isNotEmpty) {
       _screenshotFile = File(item.screenshotPath);
     }
     _warrantyPeriod = item.warrantyPeriod ?? '';
     _warrantyExpiry = item.warrantyExpiry;
     _insuranceInfo = item.insuranceInfo ?? '';
+    setState(() {});
   }
 
   @override
@@ -155,7 +159,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
             const SizedBox(height: 16),
             _buildImageSection(theme),
             const SizedBox(height: 16),
-            _buildRelatedItemsCard(context, theme),
+            _buildRelatedPoolCard(context, theme),
             const SizedBox(height: 32),
             _buildSubmitButton(theme),
             if (_pendingItems.length > 1) ...[
@@ -321,7 +325,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
     );
   }
 
-  Widget _buildRelatedItemsCard(BuildContext context, ThemeData theme) {
+  Widget _buildRelatedPoolCard(BuildContext context, ThemeData theme) {
     final loc = ref.read(localeCodeProvider);
 
     return Card(
@@ -334,23 +338,24 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  t('related.title', loc),
+                  t('relatedPool.title', loc),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.add),
-                  onPressed: () => _showRelatedItemsDialog(context),
+                  onPressed: () => _showCreatePoolDialog(context),
+                  tooltip: t('relatedPool.add', loc),
                 ),
               ],
             ),
-            if (_relatedItems.isEmpty)
+            if (_relatedPools.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Center(
                   child: Text(
-                    t('related.empty', loc),
+                    t('relatedPool.empty', loc),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -358,16 +363,15 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
                 ),
               )
             else
-              ..._relatedItems.map((uuid) {
-                return FutureBuilder<AssetItem?>(
-                  future: ref.read(assetDaoProvider).getByUuid(uuid),
+              ..._relatedPools.map((pool) {
+                return FutureBuilder<List<AssetItem>>(
+                  future: _getItemsInPool(pool),
                   builder: (context, snapshot) {
-                    if (!snapshot.hasData || snapshot.data == null) {
-                      return const SizedBox.shrink();
-                    }
-                    final relatedItem = snapshot.data!;
+                    final items = snapshot.data ?? [];
+                    final totalPrice = items.fold(0.0, (sum, item) => sum + item.price);
+                    
                     return ListTile(
-                      key: Key(uuid),
+                      key: Key(pool.uuid),
                       contentPadding: EdgeInsets.zero,
                       leading: Container(
                         width: 40,
@@ -376,151 +380,121 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
                           color: theme.colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(
-                          AppIcons.getIcon(_getCategoryIcon(relatedItem.category)),
-                          color: theme.colorScheme.primary,
-                          size: 20,
-                        ),
+                        child: const Icon(Icons.group, color: Colors.blue, size: 20),
                       ),
-                      title: Text(relatedItem.name),
+                      title: Text(pool.name),
                       subtitle: Text(
-                        MoneyUtils.format(relatedItem.price, locale: loc),
-                        style: TextStyle(color: theme.colorScheme.primary),
+                        '${t('relatedPool.itemCount', loc)}: ${items.length} | ${t('relatedPool.totalPrice', loc)}: ${MoneyUtils.format(totalPrice, locale: loc)}',
+                        style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.remove_circle, color: Colors.orange),
-                        onPressed: () {
-                          setState(() {
-                            _relatedItems.remove(uuid);
-                          });
-                        },
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _confirmDeletePool(pool),
+                          ),
+                          const Icon(Icons.arrow_forward_ios),
+                        ],
                       ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RelatedPoolDetailPage(
+                              pool: pool,
+                              currentItemUuid: widget.editItem?.uuid ?? '',
+                              isReadOnly: false,
+                            ),
+                          ),
+                        ).then((_) => _refreshPools());
+                      },
                     );
                   },
                 );
               }),
-            if (_relatedItems.isNotEmpty) ...[
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    t('related.totalValue', loc),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  FutureBuilder<double>(
-                    future: _calculateRelatedTotalValue(),
-                    builder: (context, snapshot) {
-                      final total = snapshot.data ?? 0.0;
-                      return Text(
-                        MoneyUtils.format(total, locale: loc),
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  Future<double> _calculateRelatedTotalValue() async {
-    double total = 0.0;
-    for (final uuid in _relatedItems) {
-      final relatedItem = await ref.read(assetDaoProvider).getByUuid(uuid);
-      if (relatedItem != null) {
-        total += relatedItem.price;
-      }
-    }
-    return total;
+  Future<List<AssetItem>> _getItemsInPool(RelatedPool pool) async {
+    final dao = AssetDao.instance;
+    final items = await Future.wait(
+      pool.itemUuids.map((uuid) => dao.getByUuid(uuid)),
+    );
+    return items.whereType<AssetItem>().toList();
   }
 
-  void _showRelatedItemsDialog(BuildContext context) async {
-    final allItems = await ref.read(assetListProvider.future);
-    final currentItemId = widget.editItem?.id ?? 0;
-    final availableItems = allItems.where((i) =>
-      i.id != currentItemId &&
-      !i.isArchived &&
-      !i.isDeleted
-    ).toList();
-
-    if (!context.mounted) return;
-
-    final dialogTheme = Theme.of(context);
+  Future<void> _showCreatePoolDialog(BuildContext context) async {
     final loc = ref.read(localeCodeProvider);
+    final TextEditingController nameController = TextEditingController();
 
-    showDialog(
+    await showDialog(
       context: context,
-      barrierDismissible: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: Text(t('related.selectTitle', loc)),
-          contentPadding: EdgeInsets.zero,
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 400,
-            child: availableItems.isEmpty
-                ? Center(child: Text(t('related.noMore', loc)))
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: availableItems.length,
-                    itemBuilder: (ctx, index) {
-                      final relatedItem = availableItems[index];
-                      final isSelected = _relatedItems.contains(relatedItem.uuid);
-                      return ListTile(
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: dialogTheme.colorScheme.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            AppIcons.getIcon(_getCategoryIcon(relatedItem.category)),
-                            color: dialogTheme.colorScheme.primary,
-                            size: 20,
-                          ),
-                        ),
-                        title: Text(relatedItem.name),
-                        subtitle: Text(
-                          t(AppConstants.getCategoryNameKey(relatedItem.category), loc),
-                        ),
-                        trailing: IconButton(
-                          icon: isSelected 
-                              ? const Icon(Icons.remove_circle, color: Colors.orange)
-                              : const Icon(Icons.add_circle, color: Colors.green),
-                          onPressed: () {
-                            setState(() {
-                              if (isSelected) {
-                                _relatedItems.remove(relatedItem.uuid);
-                              } else {
-                                _relatedItems.add(relatedItem.uuid);
-                              }
-                            });
-                            if (mounted) {
-                              this.setState(() {});
-                            }
-                          },
-                        ),
-                      );
-                    },
-                  ),
+      builder: (context) {
+        return AlertDialog(
+          title: Text(t('relatedPool.create', loc)),
+          content: TextField(
+            controller: nameController,
+            decoration: InputDecoration(hintText: t('relatedPool.nameHint', loc)),
           ),
-        ),
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(t('confirm.cancel', loc)),
+            ),
+            TextButton(
+              onPressed: () async {
+                final name = nameController.text.trim();
+                if (name.isNotEmpty) {
+                  await RelatedPoolDao.instance.create(name, widget.editItem?.uuid ?? '');
+                  await _refreshPools();
+                  Navigator.pop(context);
+                }
+              },
+              child: Text(t('confirm.ok', loc)),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  String _getCategoryIcon(String category) {
-    return AppConstants.getCategoryIconName(category);
+  Future<void> _confirmDeletePool(RelatedPool pool) async {
+    final loc = ref.read(localeCodeProvider);
+    
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(t('relatedPool.deletePool', loc)),
+          content: Text(t('relatedPool.deletePoolConfirm', loc).replaceAll('{name}', pool.name)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(t('confirm.cancel', loc)),
+            ),
+            TextButton(
+              onPressed: () async {
+                await RelatedPoolDao.instance.delete(pool.uuid);
+                await _refreshPools();
+                Navigator.pop(context);
+              },
+              child: Text(t('confirm.ok', loc)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _refreshPools() async {
+    if (widget.editItem != null) {
+      _relatedPools = await RelatedPoolDao.instance.getByItemUuid(widget.editItem!.uuid);
+      setState(() {});
+    }
   }
 
   Future<void> _pickImages() async {
@@ -710,12 +684,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
     final wp = _warrantyPeriod.trim();
     final ins = _insuranceInfo.trim();
 
-    final oldRelatedItems = widget.editItem!.relatedItems;
-    final newRelatedItems = _relatedItems;
-
-    final addedItems = newRelatedItems.where((uuid) => !oldRelatedItems.contains(uuid)).toList();
-    final removedItems = oldRelatedItems.where((uuid) => !newRelatedItems.contains(uuid)).toList();
-
+    // 更新当前物品（关联池独立管理，不在物品属性中存储）
     final updated = widget.editItem!.copyWith(
       name: _nameController.text.trim(),
       brand: _brandController.text.trim(),
@@ -727,60 +696,11 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       rating: _rating,
       screenshotPath: _screenshotFile?.path ?? widget.editItem!.screenshotPath,
       images: _images,
-      relatedItems: _relatedItems,
       warrantyPeriod: wp.isNotEmpty ? wp : null,
       warrantyExpiry: _warrantyExpiry,
       insuranceInfo: ins.isNotEmpty ? ins : null,
     );
     await dao.update(updated);
-
-    for (final uuid in addedItems) {
-      final targetItem = await dao.getByUuid(uuid);
-      if (targetItem != null) {
-        final targetRelatedItems = List<String>.from(targetItem.relatedItems)..add(widget.editItem!.uuid);
-        await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
-
-        for (final existingUuid in _relatedItems) {
-          if (existingUuid != uuid && existingUuid != widget.editItem!.uuid) {
-            final existingItem = await dao.getByUuid(existingUuid);
-            if (existingItem != null) {
-              if (!existingItem.relatedItems.contains(uuid)) {
-                final existingRelatedItems = List<String>.from(existingItem.relatedItems)..add(uuid);
-                await dao.update(existingItem.copyWith(relatedItems: existingRelatedItems));
-              }
-              if (!targetRelatedItems.contains(existingUuid)) {
-                targetRelatedItems.add(existingUuid);
-                await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
-              }
-            }
-          }
-        }
-      }
-    }
-
-    for (final uuid in removedItems) {
-      final targetItem = await dao.getByUuid(uuid);
-      if (targetItem != null) {
-        final targetRelatedItems = List<String>.from(targetItem.relatedItems)..remove(widget.editItem!.uuid);
-        await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
-
-        for (final existingUuid in _relatedItems) {
-          if (existingUuid != uuid && existingUuid != widget.editItem!.uuid) {
-            final existingItem = await dao.getByUuid(existingUuid);
-            if (existingItem != null) {
-              if (existingItem.relatedItems.contains(uuid)) {
-                final existingRelatedItems = List<String>.from(existingItem.relatedItems)..remove(uuid);
-                await dao.update(existingItem.copyWith(relatedItems: existingRelatedItems));
-              }
-              if (targetRelatedItems.contains(existingUuid)) {
-                targetRelatedItems.remove(existingUuid);
-                await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
-              }
-            }
-          }
-        }
-      }
-    }
 
     if (mounted) {
       AppToast.capsule(context, t('toast.updated', ref.read(localeCodeProvider)), Colors.green);
@@ -804,7 +724,6 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       rating: _rating,
       screenshotPath: _screenshotFile?.path ?? '',
       images: _images,
-      relatedItems: _relatedItems,
       aiRawData: _pendingItems.length > 1 
           ? t('add.aiRawDataMultiple', ref.read(localeCodeProvider))
               .replaceAll('{n}', '${_pendingItems.length}')
@@ -814,27 +733,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       warrantyExpiry: _warrantyExpiry,
       insuranceInfo: ins.isNotEmpty ? ins : null,
     );
-    final saved = await dao.add(item);
-
-    for (final uuid in _relatedItems) {
-      final targetItem = await dao.getByUuid(uuid);
-      if (targetItem != null) {
-        final targetRelatedItems = List<String>.from(targetItem.relatedItems)..add(saved.uuid);
-        await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
-
-        for (final otherUuid in _relatedItems) {
-          if (otherUuid != uuid && !targetRelatedItems.contains(otherUuid)) {
-            final otherItem = await dao.getByUuid(otherUuid);
-            if (otherItem != null) {
-              final otherRelatedItems = List<String>.from(otherItem.relatedItems)..add(uuid);
-              await dao.update(otherItem.copyWith(relatedItems: otherRelatedItems));
-              targetRelatedItems.add(otherUuid);
-              await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
-            }
-          }
-        }
-      }
-    }
+    await dao.add(item);
 
     if (mounted) {
       AppToast.capsule(context, t('toast.addedN', ref.read(localeCodeProvider))
@@ -858,33 +757,12 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
       rating: _rating,
       screenshotPath: _screenshotFile?.path ?? '',
       images: _images,
-      relatedItems: _relatedItems,
       aiRawData: _aiResult != null ? _aiResult.toString() : '',
       warrantyPeriod: wp.isNotEmpty ? wp : null,
       warrantyExpiry: _warrantyExpiry,
       insuranceInfo: ins.isNotEmpty ? ins : null,
     );
     final saved = await dao.add(item);
-
-    for (final uuid in _relatedItems) {
-      final targetItem = await dao.getByUuid(uuid);
-      if (targetItem != null) {
-        final targetRelatedItems = List<String>.from(targetItem.relatedItems)..add(saved.uuid);
-        await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
-
-        for (final otherUuid in _relatedItems) {
-          if (otherUuid != uuid && !targetRelatedItems.contains(otherUuid)) {
-            final otherItem = await dao.getByUuid(otherUuid);
-            if (otherItem != null) {
-              final otherRelatedItems = List<String>.from(otherItem.relatedItems)..add(uuid);
-              await dao.update(otherItem.copyWith(relatedItems: otherRelatedItems));
-              targetRelatedItems.add(otherUuid);
-              await dao.update(targetItem.copyWith(relatedItems: targetRelatedItems));
-            }
-          }
-        }
-      }
-    }
 
     _tryEnrich(saved);
     if (mounted) {

@@ -13,7 +13,7 @@ class BackupScheduler {
   static final BackupScheduler instance = BackupScheduler._();
 
   final ConfigDao _configDao = ConfigDao();
-  final AssetDao _assetDao = AssetDao();
+  final AssetDao _assetDao = AssetDao.instance;
   final WebDavService _webdavService = WebDavService();
   bool _started = false;
 

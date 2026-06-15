@@ -3,7 +3,7 @@ import '../../data/database/asset_dao.dart';
 import '../../data/models/asset_item.dart';
 
 /// DAO 实例 provider
-final assetDaoProvider = Provider<AssetDao>((ref) => AssetDao());
+final assetDaoProvider = Provider<AssetDao>((ref) => AssetDao.instance);
 
 /// 数据版本号 — 所有写操作后 bump 一次，依赖它的 provider 自动刷新
 final assetVersionProvider = StateProvider<int>((ref) => 0);

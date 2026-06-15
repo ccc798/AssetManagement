@@ -222,7 +222,7 @@ class CategoryManagementPage extends ConsumerWidget {
 
   Future<void> _checkAndConfirmDelete(BuildContext context, WidgetRef ref, CategoryItem cat) async {
     // 查询该分类下的物品
-    final dao = AssetDao();
+    final dao = AssetDao.instance;
     final items = await dao.getByCategoryAll(cat.name);
     final loc4 = ref.read(localeCodeProvider);
     final displayName2 = cat.isPreset
@@ -264,7 +264,7 @@ class CategoryManagementPage extends ConsumerWidget {
   Future<void> _doFinalDelete(BuildContext context, WidgetRef ref, CategoryItem cat, int itemCount) async {
     try {
       // 1. 删除该分类下的所有物品（硬删除）
-      final dao = AssetDao();
+      final dao = AssetDao.instance;
       await dao.deleteByCategory(cat.name);
       // 2. 删除分类本身
       await CategoryDao().delete(cat.id);

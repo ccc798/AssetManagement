@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../models/asset_item.dart';
+import '../models/related_pool.dart';
 import 'package:collection/collection.dart';
 
 /// 基于文件的 JSON 存储管理器
@@ -10,14 +11,19 @@ class DatabaseManager {
   static final DatabaseManager instance = DatabaseManager._();
 
   List<AssetItem> _items = [];
+  List<RelatedPool> _pools = [];
   String? _dbPath;
   bool _initialized = false;
+
+  String? _poolsPath;
 
   Future<void> init() async {
     if (_initialized) return;
     final dir = await getApplicationDocumentsDirectory();
     _dbPath = '${dir.path}/asset_management_data.json';
+    _poolsPath = '${dir.path}/related_pools.json';
     await _load();
+    await _loadPools();
     _initialized = true;
   }
 
@@ -43,6 +49,34 @@ class DatabaseManager {
     try {
       final file = File(_dbPath!);
       final content = jsonEncode(_items.map((e) => e.toJson()).toList());
+      await file.writeAsString(content);
+    } catch (e) {
+      // 写入失败时不崩溃，静默处理（下次操作会重试）
+    }
+  }
+
+  Future<void> _loadPools() async {
+    if (_poolsPath == null) return;
+    final file = File(_poolsPath!);
+    if (await file.exists()) {
+      try {
+        final content = await file.readAsString();
+        final List<dynamic> jsonList = jsonDecode(content);
+        _pools = jsonList.map((e) => RelatedPool.fromJson(e as Map<String, dynamic>)).toList();
+      } catch (e) {
+        _pools = [];
+      }
+    } else {
+      _pools = [];
+      await _savePools();
+    }
+  }
+
+  Future<void> _savePools() async {
+    if (_poolsPath == null) return;
+    try {
+      final file = File(_poolsPath!);
+      final content = jsonEncode(_pools.map((e) => e.toJson()).toList());
       await file.writeAsString(content);
     } catch (e) {
       // 写入失败时不崩溃，静默处理（下次操作会重试）
@@ -333,4 +367,68 @@ class DatabaseManager {
   }
 
   bool get isInitialized => _initialized;
+
+  /// 关联池操作
+
+  List<RelatedPool> getRelatedPools() {
+    _ensureInitialized();
+    return List.from(_pools);
+  }
+
+  RelatedPool? getRelatedPoolByUuid(String uuid) {
+    _ensureInitialized();
+    return _pools.firstWhereOrNull((pool) => pool.uuid == uuid);
+  }
+
+  List<RelatedPool> getRelatedPoolsByItemUuid(String itemUuid) {
+    _ensureInitialized();
+    return _pools.where((pool) => pool.itemUuids.contains(itemUuid)).toList();
+  }
+
+  Future<void> addRelatedPool(RelatedPool pool) async {
+    _ensureInitialized();
+    _pools.add(pool);
+    await _savePools();
+  }
+
+  Future<void> addItemToRelatedPool(String poolUuid, String itemUuid) async {
+    _ensureInitialized();
+    final index = _pools.indexWhere((p) => p.uuid == poolUuid);
+    if (index >= 0) {
+      final pool = _pools[index];
+      if (!pool.itemUuids.contains(itemUuid)) {
+        _pools[index] = pool.copyWith(itemUuids: [...pool.itemUuids, itemUuid]);
+        await _savePools();
+      }
+    }
+  }
+
+  Future<void> removeItemFromRelatedPool(String poolUuid, String itemUuid) async {
+    _ensureInitialized();
+    final index = _pools.indexWhere((p) => p.uuid == poolUuid);
+    if (index >= 0) {
+      final pool = _pools[index];
+      if (pool.itemUuids.contains(itemUuid)) {
+        _pools[index] = pool.copyWith(
+          itemUuids: pool.itemUuids.where((u) => u != itemUuid).toList(),
+        );
+        await _savePools();
+      }
+    }
+  }
+
+  Future<void> updateRelatedPool(RelatedPool pool) async {
+    _ensureInitialized();
+    final index = _pools.indexWhere((p) => p.uuid == pool.uuid);
+    if (index >= 0) {
+      _pools[index] = pool.copyWith(updatedAt: DateTime.now());
+      await _savePools();
+    }
+  }
+
+  Future<void> deleteRelatedPool(String uuid) async {
+    _ensureInitialized();
+    _pools.removeWhere((p) => p.uuid == uuid);
+    await _savePools();
+  }
 }
