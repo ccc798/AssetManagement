@@ -6,7 +6,7 @@ class AssetRepository {
 
   AssetRepository({
     AssetDao? assetDao,
-  })  : _assetDao = assetDao ?? AssetDao();
+  })  : _assetDao = assetDao ?? AssetDao.instance;
 
   Future<List<AssetItem>> getItems({
     String? category,

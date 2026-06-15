@@ -96,6 +96,10 @@ class _VersionUpdatePageState extends ConsumerState<VersionUpdatePage> {
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
+                setState(() {
+                  _isDownloading = true;
+                  _downloadProgress = '0%';
+                });
                 _startDownloadWithoutInstall();
               },
               child: Text(t('confirm.cancel', loc)),

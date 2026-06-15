@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/translations.dart';
+import '../../../core/utils/money_utils.dart';
 import '../../../data/database/asset_dao.dart';
 import '../../../data/database/related_pool_dao.dart';
 import '../../../data/models/asset_item.dart';
@@ -26,6 +27,7 @@ class _RelatedPoolDetailPageState extends ConsumerState<RelatedPoolDetailPage> {
   List<AssetItem> _items = [];
   RelatedPool _pool = RelatedPool(name: '', itemUuids: []);
   bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -35,94 +37,138 @@ class _RelatedPoolDetailPageState extends ConsumerState<RelatedPoolDetailPage> {
   }
 
   Future<void> _loadItems() async {
-    setState(() => _isLoading = true);
-    final dao = AssetDao.instance;
-    final items = await Future.wait(
-      _pool.itemUuids.map((uuid) => dao.getByUuid(uuid)),
-    );
-    _items = items.whereType<AssetItem>().toList();
-    setState(() => _isLoading = false);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    
+    try {
+      final dao = AssetDao.instance;
+      final items = await Future.wait(
+        _pool.itemUuids.map((uuid) => dao.getByUuid(uuid)),
+      );
+      _items = items.whereType<AssetItem>().toList();
+    } catch (e) {
+      setState(() {
+        _errorMessage = t('error.loadFailed', ref.read(localeCodeProvider));
+      });
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _refreshPool() async {
-    final updatedPool = await RelatedPoolDao.instance.getByUuid(_pool.uuid);
-    if (updatedPool != null) {
-      _pool = updatedPool;
-      _loadItems();
+    try {
+      final updatedPool = await RelatedPoolDao.instance.getByUuid(_pool.uuid);
+      if (updatedPool != null) {
+        _pool = updatedPool;
+        _loadItems();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(t('error.loadFailed', ref.read(localeCodeProvider)))),
+        );
+      }
     }
   }
 
   Future<void> _addItem(String itemUuid) async {
     if (widget.isReadOnly) return;
     
-    await RelatedPoolDao.instance.addItem(_pool.uuid, itemUuid);
-    _refreshPool();
+    try {
+      await RelatedPoolDao.instance.addItem(_pool.uuid, itemUuid);
+      _refreshPool();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(t('error.loadFailed', ref.read(localeCodeProvider)))),
+        );
+      }
+    }
   }
 
   Future<void> _removeItem(String itemUuid) async {
     if (widget.isReadOnly) return;
     
-    await RelatedPoolDao.instance.removeItem(_pool.uuid, itemUuid);
-    _refreshPool();
+    try {
+      await RelatedPoolDao.instance.removeItem(_pool.uuid, itemUuid);
+      _refreshPool();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(t('error.loadFailed', ref.read(localeCodeProvider)))),
+        );
+      }
+    }
   }
 
   Future<void> _showAddItemDialog() async {
     if (widget.isReadOnly) return;
     
     final loc = ref.read(localeCodeProvider);
-    final allItems = await AssetDao.instance.getAll();
-    final availableItems = allItems.where((i) => 
-      !_pool.itemUuids.contains(i.uuid) && !i.isDeleted && !i.isArchived
-    ).toList();
+    
+    try {
+      final allItems = await AssetDao.instance.getAll();
+      final availableItems = allItems.where((i) => 
+        !_pool.itemUuids.contains(i.uuid) && !i.isDeleted && !i.isArchived
+      ).toList();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(t('relatedPool.addItem', loc)),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 400,
-            child: availableItems.isEmpty
-                ? Center(child: Text(t('relatedPool.noItems', loc)))
-                : ListView.builder(
-                    itemCount: availableItems.length,
-                    itemBuilder: (context, index) {
-                      final item = availableItems[index];
-                      return ListTile(
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text(t('relatedPool.addItem', loc)),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: availableItems.isEmpty
+                  ? Center(child: Text(t('relatedPool.noItems', loc)))
+                  : ListView.builder(
+                      itemCount: availableItems.length,
+                      itemBuilder: (context, index) {
+                        final item = availableItems[index];
+                        return ListTile(
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(Icons.inventory_2, color: Theme.of(context).colorScheme.primary, size: 20),
                           ),
-                          child: Icon(Icons.inventory_2, color: Theme.of(context).colorScheme.primary, size: 20),
-                        ),
-                        title: Text(item.name),
-                        subtitle: Text('¥${item.price.toStringAsFixed(2)}'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.add_circle, color: Colors.green),
-                          onPressed: () {
-                            _addItem(item.uuid);
-                            Navigator.pop(context);
-                          },
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(t('confirm.cancel', loc)),
+                          title: Text(item.name),
+                          subtitle: Text(MoneyUtils.format(item.price, locale: loc)),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.add_circle, color: Colors.green),
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _addItem(item.uuid);
+                            },
+                          ),
+                        );
+                      },
+                    ),
             ),
-          ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(t('confirm.cancel', loc)),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(t('error.loadFailed', loc))),
         );
-      },
-    );
+      }
+    }
   }
 
   double _getTotalPrice() {
@@ -140,12 +186,14 @@ class _RelatedPoolDetailPageState extends ConsumerState<RelatedPoolDetailPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              children: [
-                _buildHeader(theme, loc),
-                _buildItemList(theme, loc),
-              ],
-            ),
+          : _errorMessage != null
+              ? Center(child: Text(_errorMessage!))
+              : ListView(
+                  children: [
+                    _buildHeader(theme, loc),
+                    _buildItemList(theme, loc),
+                  ],
+                ),
       floatingActionButton: !widget.isReadOnly
           ? FloatingActionButton(
               onPressed: _showAddItemDialog,
@@ -169,7 +217,7 @@ class _RelatedPoolDetailPageState extends ConsumerState<RelatedPoolDetailPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              '${t('relatedPool.totalPrice', loc)}: ¥${_getTotalPrice().toStringAsFixed(2)}',
+              '${t('relatedPool.totalPrice', loc)}: ${MoneyUtils.format(_getTotalPrice(), locale: loc)}',
               style: const TextStyle(fontSize: 16),
             ),
           ],
@@ -198,13 +246,13 @@ class _RelatedPoolDetailPageState extends ConsumerState<RelatedPoolDetailPage> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.inventory_2, color: theme.colorScheme.primary, size: 20),
               ),
               title: Text(item.name),
-              subtitle: Text('¥${item.price.toStringAsFixed(2)}'),
+              subtitle: Text(MoneyUtils.format(item.price, locale: loc)),
               trailing: !widget.isReadOnly
                   ? IconButton(
                       icon: const Icon(Icons.remove_circle, color: Colors.red),

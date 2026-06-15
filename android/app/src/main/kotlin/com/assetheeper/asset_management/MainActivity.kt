@@ -133,11 +133,31 @@ class MainActivity : FlutterActivity() {
 
     private fun openInstallUnknownAppsSettings() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                data = Uri.parse("package:$packageName")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            try {
+                // 尝试直接跳转到应用特定的未知来源设置
+                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:$packageName")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // 如果失败，尝试跳转到应用信息页面
+                try {
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.parse("package:$packageName")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    startActivity(intent)
+                } catch (e2: Exception) {
+                    e2.printStackTrace()
+                    // 如果仍然失败，跳转到通用安全设置
+                    val intent = Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    startActivity(intent)
+                }
             }
-            startActivity(intent)
         } else {
             val intent = Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK

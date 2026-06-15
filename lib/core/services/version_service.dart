@@ -13,14 +13,25 @@ class VersionService {
   static String get githubHomeUrl => _githubHomeUrl;
 
   static Future<String> _getDownloadsDirectory() async {
+    // 优先使用标准Download目录
     final downloadsDir = Directory('/storage/emulated/0/Download');
     if (await downloadsDir.exists()) {
       return downloadsDir.path;
     }
+    
+    // 尝试创建Download目录
+    try {
+      await downloadsDir.create(recursive: true);
+      return downloadsDir.path;
+    } catch (_) {}
+    
+    // 备选方案：使用外部存储目录
     final dir = await getExternalStorageDirectory();
     if (dir != null) {
       return dir.path;
     }
+    
+    // 最后备选：应用私有目录
     return (await getApplicationDocumentsDirectory()).path;
   }
 
