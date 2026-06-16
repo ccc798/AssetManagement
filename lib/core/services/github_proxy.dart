@@ -44,23 +44,45 @@ class GithubProxyService {
     return results;
   }
 
+  static const String _testFileUrl = 'https://github.com/ccc798/AssetManagement/releases/download/v0.0.1/AssetManagement_v0.0.1.apk';
+
   Future<ProxyResult> _testLatencyAsync(String proxy) async {
     try {
-      final url = '${proxy}https://github.com/favicon.ico';
+      final testUrl = '$proxy$_testFileUrl';
       final stopwatch = Stopwatch()..start();
-      
+
       await _dio.head(
-        url,
+        testUrl,
         options: Options(
-          connectTimeout: const Duration(seconds: 5),
-          receiveTimeout: const Duration(seconds: 5),
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          followRedirects: true,
+          validateStatus: (status) => status != null && status < 500,
         ),
       );
-      
+
       stopwatch.stop();
       return ProxyResult(proxy: proxy, latency: stopwatch.elapsedMilliseconds);
-    } catch (_) {
-      return ProxyResult(proxy: proxy, latency: -1);
+    } catch (e) {
+      try {
+        final testUrl = '$proxy$_testFileUrl';
+        final stopwatch = Stopwatch()..start();
+
+        await _dio.get(
+          testUrl,
+          options: Options(
+            connectTimeout: const Duration(seconds: 10),
+            receiveTimeout: const Duration(seconds: 10),
+            followRedirects: true,
+            validateStatus: (status) => status != null && status < 500,
+          ),
+        );
+
+        stopwatch.stop();
+        return ProxyResult(proxy: proxy, latency: stopwatch.elapsedMilliseconds);
+      } catch (_) {
+        return ProxyResult(proxy: proxy, latency: -1);
+      }
     }
   }
 
