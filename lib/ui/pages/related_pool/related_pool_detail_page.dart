@@ -110,7 +110,7 @@ class _RelatedPoolDetailPageState extends ConsumerState<RelatedPoolDetailPage> {
     
     try {
       final allItems = await AssetDao.instance.getAll();
-      final availableItems = allItems.where((i) => 
+      List<AssetItem> availableItems = allItems.where((i) => 
         !_pool.itemUuids.contains(i.uuid) && !i.isDeleted && !i.isArchived
       ).toList();
 
@@ -119,46 +119,59 @@ class _RelatedPoolDetailPageState extends ConsumerState<RelatedPoolDetailPage> {
       await showDialog(
         context: context,
         builder: (context) {
-          return AlertDialog(
-            title: Text(t('relatedPool.addItem', loc)),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 400,
-              child: availableItems.isEmpty
-                  ? Center(child: Text(t('relatedPool.noItems', loc)))
-                  : ListView.builder(
-                      itemCount: availableItems.length,
-                      itemBuilder: (context, index) {
-                        final item = availableItems[index];
-                        return ListTile(
-                          leading: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(Icons.inventory_2, color: Theme.of(context).colorScheme.primary, size: 20),
-                          ),
-                          title: Text(item.name),
-                          subtitle: Text(MoneyUtils.format(item.price, locale: loc)),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.add_circle, color: Colors.green),
-                            onPressed: () {
-                              Navigator.pop(context);
-                              _addItem(item.uuid);
-                            },
-                          ),
-                        );
-                      },
-                    ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(t('confirm.cancel', loc)),
-              ),
-            ],
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                title: Text(t('relatedPool.addItem', loc)),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  height: 400,
+                  child: availableItems.isEmpty
+                      ? Center(child: Text(t('relatedPool.noItems', loc)))
+                      : ListView.builder(
+                          itemCount: availableItems.length,
+                          itemBuilder: (context, index) {
+                            final item = availableItems[index];
+                            return ListTile(
+                              leading: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(Icons.inventory_2, color: Theme.of(context).colorScheme.primary, size: 20),
+                              ),
+                              title: Text(item.name),
+                              subtitle: Text(MoneyUtils.format(item.price, locale: loc)),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.add_circle, color: Colors.green),
+                                onPressed: () async {
+                                  await RelatedPoolDao.instance.addItem(_pool.uuid, item.uuid);
+                                  setState(() {
+                                    availableItems.removeAt(index);
+                                  });
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(t('confirm.cancel', loc)),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _refreshPool();
+                    },
+                    child: Text(t('confirm.ok', loc)),
+                  ),
+                ],
+              );
+            },
           );
         },
       );

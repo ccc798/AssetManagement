@@ -43,6 +43,7 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
   final ImageService _imageService = ImageService.instance;
 
   List<RelatedPool> _relatedPools = [];
+  List<String> _currentItemPoolUuids = [];
 
   List<Map<String, dynamic>> _pendingItems = [];
   int _currentItemIndex = 0;
@@ -78,13 +79,13 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
     _plannedLifetimeDays = item.plannedLifetimeDays;
     _rating = item.rating;
     _images = List.from(item.images);
-    _relatedPools = await RelatedPoolDao.instance.getByItemUuid(item.uuid);
     if (item.screenshotPath.isNotEmpty) {
       _screenshotFile = File(item.screenshotPath);
     }
     _warrantyPeriod = item.warrantyPeriod ?? '';
     _warrantyExpiry = item.warrantyExpiry;
     _insuranceInfo = item.insuranceInfo ?? '';
+    await _loadAllPools();
     setState(() {});
   }
 
@@ -390,6 +391,14 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          _isEditing
+                              ? IconButton(
+                                  icon: _currentItemPoolUuids.contains(pool.uuid)
+                                      ? const Icon(Icons.check_circle, color: Colors.green)
+                                      : const Icon(Icons.add_circle_outline, color: Colors.grey),
+                                  onPressed: () => _togglePoolAssociation(pool),
+                                )
+                              : const SizedBox(),
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () => _confirmDeletePool(pool),
@@ -490,11 +499,30 @@ class _AddItemPageState extends ConsumerState<AddItemPage> {
     );
   }
 
-  Future<void> _refreshPools() async {
+  Future<void> _loadAllPools() async {
+    _relatedPools = await RelatedPoolDao.instance.getAll();
     if (widget.editItem != null) {
-      _relatedPools = await RelatedPoolDao.instance.getByItemUuid(widget.editItem!.uuid);
-      setState(() {});
+      final itemPools = await RelatedPoolDao.instance.getByItemUuid(widget.editItem!.uuid);
+      _currentItemPoolUuids = itemPools.map((p) => p.uuid).toList();
     }
+    setState(() {});
+  }
+
+  Future<void> _refreshPools() async {
+    await _loadAllPools();
+  }
+
+  Future<void> _togglePoolAssociation(RelatedPool pool) async {
+    if (widget.editItem == null) return;
+    
+    if (_currentItemPoolUuids.contains(pool.uuid)) {
+      await RelatedPoolDao.instance.removeItem(pool.uuid, widget.editItem!.uuid);
+      _currentItemPoolUuids.remove(pool.uuid);
+    } else {
+      await RelatedPoolDao.instance.addItem(pool.uuid, widget.editItem!.uuid);
+      _currentItemPoolUuids.add(pool.uuid);
+    }
+    setState(() {});
   }
 
   Future<void> _pickImages() async {
