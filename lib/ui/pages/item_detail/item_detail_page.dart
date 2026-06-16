@@ -469,6 +469,11 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
 
   Widget _buildRelatedItemsCard(BuildContext context, WidgetRef ref, ThemeData theme, String loc) {
     final item = _currentItem ?? widget.item;
+    final validRelatedItems = item.relatedItems.where((uuid) => uuid != item.uuid).toList();
+    
+    if (validRelatedItems.isEmpty) {
+      return const SizedBox.shrink();
+    }
     
     return Card(
       child: Padding(
@@ -482,7 +487,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            ...item.relatedPool.where((uuid) => uuid != item.uuid).map((uuid) {
+            ...validRelatedItems.map((uuid) {
                 return FutureBuilder<AssetItem?>(
                   future: ref.read(assetDaoProvider).getByUuid(uuid),
                   builder: (context, snapshot) {
@@ -558,7 +563,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
   Future<double> _calculateRelatedTotalValue(WidgetRef ref) async {
     final item = _currentItem ?? widget.item;
     double total = 0.0;
-    for (final uuid in item.relatedPool.where((u) => u != item.uuid)) {
+    for (final uuid in item.relatedItems.where((u) => u != item.uuid)) {
       final relatedItem = await ref.read(assetDaoProvider).getByUuid(uuid);
       if (relatedItem != null) {
         total += relatedItem.price;
@@ -595,7 +600,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.group, color: Colors.blue, size: 20),

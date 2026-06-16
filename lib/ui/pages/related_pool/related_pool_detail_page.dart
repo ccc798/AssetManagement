@@ -73,21 +73,6 @@ class _RelatedPoolDetailPageState extends ConsumerState<RelatedPoolDetailPage> {
     }
   }
 
-  Future<void> _addItem(String itemUuid) async {
-    if (widget.isReadOnly) return;
-    
-    try {
-      await RelatedPoolDao.instance.addItem(_pool.uuid, itemUuid);
-      _refreshPool();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t('error.loadFailed', ref.read(localeCodeProvider)))),
-        );
-      }
-    }
-  }
-
   Future<void> _removeItem(String itemUuid) async {
     if (widget.isReadOnly) return;
     
