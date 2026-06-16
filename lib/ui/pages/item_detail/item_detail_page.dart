@@ -88,11 +88,6 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
                 _buildNotesCard(theme, item, loc),
               ],
 
-              if (item.relatedItems.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                _buildRelatedItemsCard(context, ref, theme, loc),
-              ],
-
               if (_relatedPools.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _buildRelatedPoolsCard(context, theme, loc),
@@ -467,110 +462,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
     );
   }
 
-  Widget _buildRelatedItemsCard(BuildContext context, WidgetRef ref, ThemeData theme, String loc) {
-    final item = _currentItem ?? widget.item;
-    final validRelatedItems = item.relatedItems.where((uuid) => uuid != item.uuid).toList();
-    
-    if (validRelatedItems.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              t('related.title', loc),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            ...validRelatedItems.map((uuid) {
-                return FutureBuilder<AssetItem?>(
-                  future: ref.read(assetDaoProvider).getByUuid(uuid),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData || snapshot.data == null) {
-                      return const SizedBox.shrink();
-                    }
-                    final relatedItem = snapshot.data!;
-                    return ListTile(
-                      key: Key(uuid),
-                      contentPadding: EdgeInsets.zero,
-                      leading: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          AppIcons.getIcon(_getCategoryIcon(relatedItem.category)),
-                          color: theme.colorScheme.primary,
-                          size: 20,
-                        ),
-                      ),
-                      title: Text(relatedItem.name),
-                      subtitle: Text(
-                        MoneyUtils.format(relatedItem.price, locale: loc),
-                        style: TextStyle(color: theme.colorScheme.primary),
-                      ),
-                      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ItemDetailPage(item: relatedItem),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
-              }),
-            const Divider(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  t('related.totalValue', loc),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                FutureBuilder<double>(
-                  future: _calculateRelatedTotalValue(ref),
-                  builder: (context, snapshot) {
-                    final total = snapshot.data ?? 0.0;
-                    return Text(
-                      MoneyUtils.format(total, locale: loc),
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<double> _calculateRelatedTotalValue(WidgetRef ref) async {
-    final item = _currentItem ?? widget.item;
-    double total = 0.0;
-    for (final uuid in item.relatedItems.where((u) => u != item.uuid)) {
-      final relatedItem = await ref.read(assetDaoProvider).getByUuid(uuid);
-      if (relatedItem != null) {
-        total += relatedItem.price;
-      }
-    }
-    return total;
-  }
+  
 
   Widget _buildRelatedPoolsCard(BuildContext context, ThemeData theme, String loc) {
     return Card(

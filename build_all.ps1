@@ -52,9 +52,23 @@ function Build-Android {
     Sync-AndroidVersion $version
     Write-Output ""
     Write-Output "=== Building Android APK ==="
-    & $flutterBin build apk --release --android-skip-build-dependency-validation
-    if ($LASTEXITCODE -ne 0) { throw "Android build failed" }
-    Write-Output "[OK] Android APK built"
+    Push-Location "$projectDir/android"
+    try {
+        $process = Start-Process -FilePath "./gradlew.bat" -ArgumentList "assembleRelease" -NoNewWindow -Wait -PassThru -RedirectStandardOutput "$projectDir/gradle_output.txt" -RedirectStandardError "$projectDir/gradle_error.txt"
+        $output = Get-Content "$projectDir/gradle_output.txt" -Raw
+        $errorOutput = Get-Content "$projectDir/gradle_error.txt" -Raw
+        Write-Output $output
+        if ($errorOutput) { Write-Output $errorOutput }
+        Remove-Item "$projectDir/gradle_output.txt" -ErrorAction SilentlyContinue
+        Remove-Item "$projectDir/gradle_error.txt" -ErrorAction SilentlyContinue
+        if ($output -match "BUILD SUCCESSFUL") {
+            Write-Output "[OK] Android APK built"
+        } else {
+            throw "Android build failed"
+        }
+    } finally {
+        Pop-Location
+    }
 }
 
 function Build-Windows {
@@ -83,11 +97,16 @@ function Build-MacOS {
 
 function Package-Android {
     param([string]$version)
-    $apkSource = Join-Path $projectDir "build/app/outputs/flutter-apk/app-release.apk"
+    $apkSourcePaths = @(
+        Join-Path $projectDir "build/app/outputs/flutter-apk/app-release.apk"
+        Join-Path $projectDir "android/app/build/outputs/flutter-apk/app-release.apk"
+        Join-Path $projectDir "android/app/build/outputs/apk/release/app-release.apk"
+    )
+    $apkSource = $apkSourcePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $apkSource) { throw "APK not found. Checked paths: $($apkSourcePaths -join ', ')" }
     $apkDest = Join-Path $projectDir "AssetManagement_v${version}.apk"
-    if (-not (Test-Path $apkSource)) { throw "APK not found at $apkSource" }
     Copy-Item $apkSource $apkDest -Force -ErrorAction Stop
-    Write-Output "[OK] APK -> AssetManagement_v${version}.apk"
+    Write-Output "[OK] APK -> AssetManagement_v${version}.apk (from: $apkSource)"
 }
 
 function Package-Windows {

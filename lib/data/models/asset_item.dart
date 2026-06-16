@@ -23,8 +23,6 @@ class AssetItem extends Equatable {
     this.isDeleted = false,
     this.isFavorite = false,
     this.images = const [],
-    this.relatedItems = const [],
-    this.relatedPool = const [],
     this.warrantyPeriod,
     this.warrantyExpiry,
     this.insuranceInfo,
@@ -51,8 +49,6 @@ class AssetItem extends Equatable {
   final bool isDeleted;
   final bool isFavorite;
   final List<String> images;
-  final List<String> relatedItems;
-  final List<String> relatedPool;
   final String? warrantyPeriod;
   final DateTime? warrantyExpiry;
   final String? insuranceInfo;
@@ -92,8 +88,6 @@ class AssetItem extends Equatable {
         'tags': tags, 'rating': rating, 'plannedLifetimeDays': plannedLifetimeDays,
         'isArchived': isArchived, 'isDeleted': isDeleted, 'isFavorite': isFavorite,
         'images': images,
-        'relatedItems': relatedItems,
-        'relatedPool': relatedPool,
         'warrantyPeriod': warrantyPeriod,
         'warrantyExpiry': warrantyExpiry?.toIso8601String(),
         'insuranceInfo': insuranceInfo,
@@ -119,8 +113,6 @@ class AssetItem extends Equatable {
         isDeleted: json['isDeleted'] as bool? ?? false,
         isFavorite: json['isFavorite'] as bool? ?? false,
         images: (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-        relatedItems: (json['relatedItems'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-        relatedPool: (json['relatedPool'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
         warrantyPeriod: json['warrantyPeriod'] as String?,
         warrantyExpiry: json['warrantyExpiry'] != null
             ? DateTime.parse(json['warrantyExpiry'] as String) : null,
@@ -136,14 +128,14 @@ class AssetItem extends Equatable {
     required DateTime purchaseDate, String brand = '', String notes = '',
     String screenshotPath = '', String aiRawData = '',
     List<String> tags = const [], int rating = 0, int plannedLifetimeDays = 365,
-    bool isFavorite = false, List<String> images = const [], List<String> relatedItems = const [],
+    bool isFavorite = false, List<String> images = const [],
     String? warrantyPeriod, DateTime? warrantyExpiry, String? insuranceInfo,
   }) {
     return AssetItem(uuid: const Uuid().v4(), name: name, category: category,
         brand: brand, price: price, purchaseDate: purchaseDate, notes: notes,
         screenshotPath: screenshotPath, aiRawData: aiRawData, tags: tags,
         rating: rating, plannedLifetimeDays: plannedLifetimeDays,
-        isFavorite: isFavorite, images: images, relatedItems: relatedItems,
+        isFavorite: isFavorite, images: images,
         warrantyPeriod: warrantyPeriod, warrantyExpiry: warrantyExpiry,
         insuranceInfo: insuranceInfo);
   }
@@ -154,7 +146,7 @@ class AssetItem extends Equatable {
     String? notes, String? screenshotPath, String? aiRawData,
     List<String>? tags, int? rating, int? plannedLifetimeDays,
     bool? isArchived, bool? isDeleted, bool? isFavorite,
-    List<String>? images, List<String>? relatedItems, List<String>? relatedPool,
+    List<String>? images,
     Object? warrantyPeriod = _sentinel,
     Object? warrantyExpiry = _sentinel,
     Object? insuranceInfo = _sentinel,
@@ -174,8 +166,6 @@ class AssetItem extends Equatable {
       isDeleted: isDeleted ?? this.isDeleted,
       isFavorite: isFavorite ?? this.isFavorite,
       images: images ?? this.images,
-      relatedItems: relatedItems ?? this.relatedItems,
-      relatedPool: relatedPool ?? this.relatedPool,
       warrantyPeriod: identical(warrantyPeriod, _sentinel) ? this.warrantyPeriod : warrantyPeriod as String?,
       warrantyExpiry: identical(warrantyExpiry, _sentinel) ? this.warrantyExpiry : warrantyExpiry as DateTime?,
       insuranceInfo: identical(insuranceInfo, _sentinel) ? this.insuranceInfo : insuranceInfo as String?,
@@ -189,7 +179,6 @@ class AssetItem extends Equatable {
         id, uuid, name, category, brand, price, purchaseDate,
         notes, screenshotPath, aiRawData, tags, rating,
         plannedLifetimeDays, isArchived, isDeleted, isFavorite, images,
-        relatedItems, relatedPool,
         warrantyPeriod, warrantyExpiry, insuranceInfo,
         createdAt, updatedAt,
       ];
