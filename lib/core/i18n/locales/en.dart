@@ -468,6 +468,8 @@ const Map<String, String> en = <String, String>{
   'version.permissionMessage': 'To auto-install updates, permission to install unknown apps is required. Otherwise, the file will be saved to Downloads folder.',
   'version.goToSettings': 'Grant Permission',
   'version.downloadSaved': 'File saved to Download folder, please install manually',
+  'version.directDownload': 'Direct Download',
+  'version.connectionFailed': 'Connection Failed',
 
   'ai.ocrInvoice': 'Scan Invoice',
   'ai.ocrWarranty': 'Scan Warranty',

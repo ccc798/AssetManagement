@@ -34,9 +34,12 @@ class GithubProxyService {
 
     final results = await Future.wait(futures);
     
-    results.removeWhere((r) => r.latency < 0);
-    
-    results.sort((a, b) => a.latency.compareTo(b.latency));
+    results.sort((a, b) {
+      if (a.latency < 0 && b.latency < 0) return 0;
+      if (a.latency < 0) return 1;
+      if (b.latency < 0) return -1;
+      return a.latency.compareTo(b.latency);
+    });
     
     return results;
   }

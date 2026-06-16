@@ -23,7 +23,7 @@ android {
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
-        versionName = "0.0.12"
+        versionName = "0.0.14"
     }
 
     buildTypes {
@@ -48,6 +48,8 @@ flutter {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
+
+
 
 
 

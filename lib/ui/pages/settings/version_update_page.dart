@@ -94,13 +94,20 @@ class _VersionUpdatePageState extends ConsumerState<VersionUpdatePage> {
           content: Text(t('version.permissionMessage', loc)),
           actions: [
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(dialogContext);
-                setState(() {
-                  _isDownloading = true;
-                  _downloadProgress = '0%';
-                });
-                _startDownloadWithoutInstall();
+                final config = await ref.read(configProvider.future);
+                final useProxy = config.githubProxyEnabled;
+                
+                if (useProxy && _downloadUrl != null) {
+                  await _showProxySelectionDialog(_downloadUrl!);
+                } else {
+                  setState(() {
+                    _isDownloading = true;
+                    _downloadProgress = '0%';
+                  });
+                  _startDownloadWithoutInstall();
+                }
               },
               child: Text(t('confirm.cancel', loc)),
             ),
@@ -176,6 +183,10 @@ class _VersionUpdatePageState extends ConsumerState<VersionUpdatePage> {
           },
           onCancel: () {
             Navigator.pop(context);
+          },
+          onDirectDownload: () {
+            Navigator.pop(context);
+            _startDownload([], downloadUrl);
           },
           locale: loc,
         );
@@ -337,6 +348,7 @@ class ProxySelectionDialog extends StatefulWidget {
   final String downloadUrl;
   final Function(String) onSelect;
   final Function() onCancel;
+  final Function() onDirectDownload;
   final String locale;
 
   const ProxySelectionDialog({
@@ -344,6 +356,7 @@ class ProxySelectionDialog extends StatefulWidget {
     required this.downloadUrl,
     required this.onSelect,
     required this.onCancel,
+    required this.onDirectDownload,
     required this.locale,
   });
 
@@ -367,24 +380,21 @@ class _ProxySelectionDialogState extends State<ProxySelectionDialog> {
     setState(() {
       _proxyResults = results;
       _isTesting = false;
-      if (results.isNotEmpty) {
-        _selectedProxy = results.first.proxy;
+      final workingProxy = results.firstWhere((r) => r.latency >= 0, orElse: () => ProxyResult(proxy: '', latency: -1));
+      if (workingProxy.proxy.isNotEmpty) {
+        _selectedProxy = workingProxy.proxy;
       }
     });
   }
 
-  Color _getLatencyColor(int latency) {
-    if (latency <= 100) return Colors.green;
-    if (latency <= 600) return Colors.yellow;
-    return Colors.red;
-  }
+  bool get _allFailed => _proxyResults.every((r) => r.latency < 0);
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       insetPadding: const EdgeInsets.all(16),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 400),
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -408,31 +418,55 @@ class _ProxySelectionDialogState extends State<ProxySelectionDialog> {
                         ],
                       ),
                     )
-                  : _proxyResults.isEmpty
-                      ? Center(
-                          child: Text(t('version.checkFailed', widget.locale)),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          itemCount: _proxyResults.length,
-                          itemBuilder: (context, index) {
-                            final proxy = _proxyResults[index];
-                            return RadioListTile(
-                              value: proxy.proxy,
-                              groupValue: _selectedProxy,
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedProxy = value;
-                                });
-                              },
-                              title: Text(proxy.proxy),
-                              subtitle: Text(
-                                '${proxy.latency}ms',
-                                style: TextStyle(color: _getLatencyColor(proxy.latency)),
-                              ),
-                            );
-                          },
-                        ),
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: _proxyResults.length,
+                      itemBuilder: (context, index) {
+                        final proxy = _proxyResults[index];
+                        final isFailed = proxy.latency < 0;
+                        
+                        return ListTile(
+                          leading: _isTesting
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                              : isFailed
+                                  ? const Icon(Icons.close, color: Colors.red, size: 20)
+                                  : const Icon(Icons.check, color: Colors.green, size: 20),
+                          title: Text(
+                            proxy.proxy,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isFailed ? Colors.grey : null,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: _isTesting
+                              ? const SizedBox(width: 60)
+                              : isFailed
+                                  ? Text(
+                                      t('version.connectionFailed', widget.locale),
+                                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                                    )
+                                  : Text(
+                                      '${proxy.latency}ms',
+                                      style: TextStyle(
+                                        color: proxy.latency <= 100 ? Colors.green 
+                                            : proxy.latency <= 600 ? Colors.yellow : Colors.red,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                          onTap: !isFailed && !_isTesting
+                              ? () {
+                                  setState(() {
+                                    _selectedProxy = proxy.proxy;
+                                  });
+                                }
+                              : null,
+                          selected: !isFailed && _selectedProxy == proxy.proxy,
+                          selectedTileColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        );
+                      },
+                    ),
             ),
             const Divider(height: 1),
             Padding(
@@ -448,10 +482,14 @@ class _ProxySelectionDialogState extends State<ProxySelectionDialog> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _selectedProxy != null
-                          ? () => widget.onSelect(_selectedProxy!)
-                          : null,
-                      child: Text(t('version.confirmDownload', widget.locale)),
+                      onPressed: _allFailed
+                          ? widget.onDirectDownload
+                          : _selectedProxy != null
+                              ? () => widget.onSelect(_selectedProxy!)
+                              : null,
+                      child: Text(_allFailed
+                          ? t('version.directDownload', widget.locale)
+                          : t('version.confirmDownload', widget.locale)),
                     ),
                   ),
                 ],

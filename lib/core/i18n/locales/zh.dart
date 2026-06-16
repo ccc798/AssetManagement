@@ -468,6 +468,8 @@ const Map<String, String> zh = <String, String>{
   'version.permissionMessage': '为了自动安装更新，需要授权"安装未知应用"权限，否则下载后将保存在Downloads文件夹中',
   'version.goToSettings': '前往授权',
   'version.downloadSaved': '文件已保存到Download文件夹，请手动安装',
+  'version.directDownload': '直接下载',
+  'version.connectionFailed': '连接失败',
 
   'ai.ocrInvoice': '识别发票',
   'ai.ocrWarranty': '识别保修卡',
